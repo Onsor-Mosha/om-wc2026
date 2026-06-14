@@ -176,14 +176,14 @@
     .sv { padding:12px 30px !important; font-size:14px !important; bottom:10px !important; }
 
     /* Auth overlay mobile */
-    #authOverlay { align-items:flex-start; padding:10px 0; }
-    .abox { padding:20px 16px; width:auto; max-width:94vw; margin:auto; }
-    .abox .logos { gap:10px; margin-bottom:8px; }
-    .abox .logos img { height:50px; }
-    .abox h2 { font-size:14px !important; letter-spacing:1px !important; margin-bottom:2px !important; }
-    .abox div[style*="font-size:18px"] { font-size:13px !important; letter-spacing:1px !important; margin-bottom:8px !important; }
+    #authOverlay { align-items:flex-start; padding:10px 0; overflow-y:auto; overflow-x:hidden; }
+    .abox { padding:20px 14px; width:auto; max-width:94vw; margin:auto; box-sizing:border-box; overflow:hidden; }
+    .abox .logos { gap:8px; margin-bottom:8px; }
+    .abox .logos img { height:44px; }
+    .abox span[style*="font-size:18px"] { font-size:12px !important; letter-spacing:1px !important; padding:3px 8px !important; margin-left:0 !important; }
+    .abox span[style*="font-size:22px"] { font-size:12px !important; letter-spacing:1px !important; padding:3px 8px !important; margin-left:0 !important; }
     .abox p { font-size:11px; margin-bottom:10px; }
-    .ainput { font-size:14px; padding:10px 12px; margin-bottom:8px; }
+    .ainput { font-size:16px; padding:10px 12px; margin-bottom:8px; }
     .abtn { font-size:14px; padding:11px; }
     .abtn2 { font-size:12px; padding:9px; }
   }
@@ -830,6 +830,8 @@ try{_sb=window.supabase.createClient('https://dazizawmjnmgmosefzxs.supabase.co',
 function scaleBracket(){
   var page = document.querySelector('.page');
   if(!page) return;
+  // Don't scale if auth overlay is showing
+  var ao=document.getElementById('authOverlay'); if(ao&&ao.style.display!=='none') return;
   // Reset transform to measure natural width
   page.style.transform = '';
   page.style.width = '';
