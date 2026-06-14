@@ -385,7 +385,7 @@ function byPos(gid,pos){ for(const[i,p] of Object.entries(sel[gid])) if(p===pos)
 function resolve(slot){
   if(slot.startsWith('W-')) return byPos(slot.slice(2),'1st');
   if(slot.startsWith('R-')) return byPos(slot.slice(2),'2nd');
-  if(slot.startsWith('T3-')) return {name:`3rd (${slot.slice(3)})`,flag:'❓',isThird:true};
+  if(slot.startsWith('T3-')) return {name:`3rd (${slot.slice(3)})`,flag:'',isThird:true};
   return null;
 }
 function clearKO(from){
@@ -456,7 +456,7 @@ function slotHtml(team,round,mi,si,winner){
     }
     return `<div class="match-slot empty">TBD</div>`;
   }
-  const flagHtml=flagImg(team.fc,'s-flag',team.em)||`<span style="font-size:12px">❓</span>`;
+  const flagHtml=flagImg(team.fc,'s-flag',team.em)||'';
   return `<div class="match-slot${w?' winner':''}" onclick="pickWinner('${round}',${mi},${si})">
     ${flagHtml}<span class="s-name">${team.name}</span>${w?'<span class="s-check">✓</span>':''}
   </div>`;
