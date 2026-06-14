@@ -768,10 +768,16 @@ function pickWinner(round,mi,si){
 }
 
 function resetAll(){
+  if(!confirm('Are you sure you want to reset all predictions? This will clear your saved answers.')) return;
   GROUPS.forEach(g=>g.teams.forEach((_,i)=>sel[g.id][i]=null));
   clearKO(0);
   updateGroups();
   updateBracket();
+  // Also delete from database
+  if(_user&&_sb){
+    _sb.from('phase1_predictions').delete().eq('user_id',_user.id).then(function(){});
+    _sb.from('phase2_predictions').delete().eq('user_id',_user.id).then(function(){});
+  }
 }
 
 // ═══════════ VIEWPORT SWITCHER ═══════════
