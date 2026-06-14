@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OM WC2026 — Admin Panel</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; font-size: 14px; min-height: 100vh; }
+
+  /* AUTH */
+  #adminAuth { position:fixed;inset:0;background:#000;z-index:999;display:flex;align-items:center;justify-content:center; }
+  .auth-box { background:#0d110d;border:1px solid #00FF00;border-radius:12px;padding:36px;width:360px;display:flex;flex-direction:column;gap:14px; }
+  .auth-box h2 { color:#00FF00;font-size:18px;text-align:center;letter-spacing:1px; }
+  .auth-box p  { color:#8a9a8a;font-size:12px;text-align:center; }
+  .auth-input  { background:#111;border:1px solid #2a3a2a;border-radius:6px;color:#fff;font-size:14px;padding:10px 14px;width:100%;outline:none; }
+  .auth-input:focus { border-color:#00FF00; }
+  .auth-btn    { background:#00FF00;color:#000;border:none;border-radius:6px;font-size:14px;font-weight:600;padding:11px;cursor:pointer; }
+  .auth-btn:hover { opacity:.85; }
+  .auth-err    { color:#ff4444;font-size:12px;text-align:center;min-height:16px; }
+
+  /* LAYOUT */
+  #adminApp { display:none; }
+  header { background:#0a110a;border-bottom:1px solid #1a2a1a;padding:14px 24px;display:flex;align-items:center;justify-content:space-between; }
+  header h1 { color:#00FF00;font-size:16px;letter-spacing:1px; }
+  header span { color:#8a9a8a;font-size:12px; }
+  .logout-btn { background:transparent;border:1px solid #2a3a2a;color:#8a9a8a;border-radius:4px;padding:4px 12px;cursor:pointer;font-size:12px; }
+  .logout-btn:hover { border-color:#ff4444;color:#ff4444; }
+
+  .container { max-width:960px;margin:0 auto;padding:24px 16px;display:flex;flex-direction:column;gap:24px; }
+
+  /* CARDS */
+  .card { background:#0d110d;border:1px solid #1a2a1a;border-radius:10px;padding:20px; }
+  .card h3 { color:#00FF00;font-size:14px;letter-spacing:.5px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #1a2a1a; }
+
+  /* PHASE CONTROL */
+  .phase-grid { display:flex;gap:10px;flex-wrap:wrap; }
+  .phase-btn { flex:1;min-width:120px;padding:14px 8px;border-radius:8px;border:1px solid #2a3a2a;background:#111;color:#8a9a8a;cursor:pointer;text-align:center;transition:.2s;font-size:13px; }
+  .phase-btn:hover { border-color:#00FF00;color:#fff; }
+  .phase-btn.active { border-color:#00FF00;background:rgba(0,255,0,.1);color:#00FF00;font-weight:600; }
+  .phase-btn .ph-num { font-size:22px;display:block;margin-bottom:4px; }
+  .phase-btn .ph-lbl { font-size:11px;opacity:.8; }
+
+  /* DEADLINE */
+  .deadline-row { display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap; }
+  .dl-group { display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px; }
+  .dl-group label { color:#8a9a8a;font-size:11px;letter-spacing:.5px; }
+  .dl-group input { background:#111;border:1px solid #2a3a2a;border-radius:6px;color:#fff;font-size:13px;padding:8px 12px;outline:none;width:100%; }
+  .dl-group input:focus { border-color:#00FF00; }
+  .save-dl { background:#00FF00;color:#000;border:none;border-radius:6px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap; }
+  .save-dl:hover { opacity:.85; }
+
+  /* RESULTS TABLE */
+  .results-section { display:flex;flex-direction:column;gap:16px; }
+  .results-tabs { display:flex;gap:8px; }
+  .rtab { padding:7px 16px;border-radius:6px;border:1px solid #2a3a2a;background:transparent;color:#8a9a8a;cursor:pointer;font-size:12px;transition:.2s; }
+  .rtab.active { border-color:#00FF00;color:#00FF00;background:rgba(0,255,0,.06); }
+  .results-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px; }
+  .result-item { background:#111;border:1px solid #1a2a1a;border-radius:8px;padding:14px; }
+  .result-item label { color:#8a9a8a;font-size:11px;display:block;margin-bottom:8px;letter-spacing:.5px; }
+  .result-row { display:flex;gap:6px;align-items:center;margin-bottom:6px; }
+  .result-row span { color:#8a9a8a;font-size:11px;width:28px;flex-shrink:0; }
+  .result-row input { flex:1;background:#0a0a0a;border:1px solid #2a3a2a;border-radius:4px;color:#fff;font-size:12px;padding:5px 8px;outline:none; }
+  .result-row input:focus { border-color:#00FF00; }
+  .result-save { width:100%;margin-top:8px;background:rgba(0,255,0,.1);border:1px solid #00FF00;color:#00FF00;border-radius:4px;padding:6px;cursor:pointer;font-size:12px;transition:.2s; }
+  .result-save:hover { background:rgba(0,255,0,.2); }
+  .result-saved { color:#00FF00;font-size:11px;text-align:center;margin-top:4px;min-height:14px; }
+
+  /* KO RESULTS */
+  .ko-match { background:#111;border:1px solid #1a2a1a;border-radius:8px;padding:14px; }
+  .ko-match label { color:#8a9a8a;font-size:11px;display:block;margin-bottom:8px; }
+  .ko-match select { width:100%;background:#0a0a0a;border:1px solid #2a3a2a;border-radius:4px;color:#fff;font-size:12px;padding:6px 8px;outline:none;margin-bottom:8px; }
+  .ko-match select:focus { border-color:#00FF00; }
+
+  /* STATS */
+  .stats-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px; }
+  .stat-box { background:#111;border:1px solid #1a2a1a;border-radius:8px;padding:14px;text-align:center; }
+  .stat-box .val { font-size:28px;font-weight:700;color:#00FF00; }
+  .stat-box .lbl { font-size:11px;color:#8a9a8a;margin-top:4px; }
+
+  /* LEADERBOARD */
+  table { width:100%;border-collapse:collapse;font-size:13px; }
+  th { color:#8a9a8a;padding:8px;text-align:left;border-bottom:1px solid #1a2a1a;font-weight:500; }
+  td { padding:8px;border-bottom:1px solid #0d110d;color:#fff; }
+  tr:hover td { background:rgba(255,255,255,.02); }
+  .rank-1 td { color:#00FF00; }
+  .rank-2 td { color:#fefc4b; }
+  .rank-3 td { color:#dd42f7; }
+
+  .msg { padding:8px 12px;border-radius:6px;font-size:12px;margin-top:8px; }
+  .msg.ok  { background:rgba(0,255,0,.1);color:#00FF00;border:1px solid #00FF00; }
+  .msg.err { background:rgba(255,68,68,.1);color:#ff4444;border:1px solid #ff4444; }
+
+  .refresh-btn { background:transparent;border:1px solid #2a3a2a;color:#8a9a8a;border-radius:4px;padding:4px 12px;cursor:pointer;font-size:11px;float:right; }
+  .refresh-btn:hover { border-color:#00FF00;color:#00FF00; }
+</style>
+</head>
+<body>
+
+<!-- ADMIN AUTH -->
+<div id="adminAuth">
+  <div class="auth-box">
+    <h2>⚙ ADMIN PANEL</h2>
+    <p>OM WC2026 Prediction Competition</p>
+    <input class="auth-input" id="adminEmail" type="email" placeholder="admin@om.sa">
+    <input class="auth-input" id="adminPass"  type="password" placeholder="Password"
+           onkeydown="if(event.key==='Enter')adminLogin()">
+    <div class="auth-err" id="adminErr"></div>
+    <button class="auth-btn" onclick="adminLogin()">Sign In as Admin</button>
+  </div>
+</div>
+
+<!-- ADMIN APP -->
+<div id="adminApp">
+  <header>
+    <h1>⚙ WC2026 ADMIN PANEL</h1>
+    <span id="adminUserLabel"></span>
+    <button class="logout-btn" onclick="adminLogout()">Sign out</button>
+  </header>
+
+  <div class="container">
+
+    <!-- STATS -->
+    <div class="card">
+      <h3>📊 Competition Overview</h3>
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-box"><div class="val" id="statUsers">–</div><div class="lbl">Registered Users</div></div>
+        <div class="stat-box"><div class="val" id="statPh1">–</div><div class="lbl">Phase 1 Submitted</div></div>
+        <div class="stat-box"><div class="val" id="statPh2">–</div><div class="lbl">Phase 2 Submitted</div></div>
+        <div class="stat-box"><div class="val" id="statPhase">–</div><div class="lbl">Current Phase</div></div>
+      </div>
+    </div>
+
+    <!-- PHASE CONTROL -->
+    <div class="card">
+      <h3>🎛 Phase Control</h3>
+      <div class="phase-grid">
+        <button class="phase-btn" id="phBtn0" onclick="setPhase(0)">
+          <span class="ph-num">⏳</span><span class="ph-lbl">Not Started</span>
+        </button>
+        <button class="phase-btn" id="phBtn1" onclick="setPhase(1)">
+          <span class="ph-num">1️⃣</span><span class="ph-lbl">Phase 1 — Groups</span>
+        </button>
+        <button class="phase-btn" id="phBtn2" onclick="setPhase(2)">
+          <span class="ph-num">2️⃣</span><span class="ph-lbl">Phase 2 — Knockouts</span>
+        </button>
+        <button class="phase-btn" id="phBtn3" onclick="setPhase(3)">
+          <span class="ph-num">🔒</span><span class="ph-lbl">Closed</span>
+        </button>
+      </div>
+      <div id="phaseMsg" class="msg" style="display:none"></div>
+    </div>
+
+    <!-- DEADLINES -->
+    <div class="card">
+      <h3>⏰ Prediction Deadlines</h3>
+      <p style="color:#8a9a8a;font-size:12px;margin-bottom:14px">After deadline, predictions are locked even if phase is still open.</p>
+      <div class="deadline-row">
+        <div class="dl-group">
+          <label>PHASE 1 DEADLINE (Group Stage)</label>
+          <input type="datetime-local" id="dl1">
+        </div>
+        <div class="dl-group">
+          <label>PHASE 2 DEADLINE (Knockout Stage)</label>
+          <input type="datetime-local" id="dl2">
+        </div>
+        <button class="save-dl" onclick="saveDeadlines()">Save Deadlines</button>
+      </div>
+      <div id="dlMsg" class="msg" style="display:none"></div>
+    </div>
+
+    <!-- OFFICIAL RESULTS -->
+    <div class="card">
+      <h3>📋 Enter Official Results</h3>
+      <p style="color:#8a9a8a;font-size:12px;margin-bottom:14px">Points are calculated automatically when you save results.</p>
+      <div class="results-section">
+        <div class="results-tabs">
+          <button class="rtab active" onclick="showResultsTab('groups')">Group Stage</button>
+          <button class="rtab" onclick="showResultsTab('knockout')">Knockout Rounds</button>
+        </div>
+        <div id="resultsGroups" class="results-grid"></div>
+        <div id="resultsKnockout" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD -->
+    <div class="card">
+      <h3>🏆 Leaderboard <button class="refresh-btn" onclick="loadLeaderboard()">↺ Refresh</button></h3>
+      <div id="lbContent"><p style="color:#8a9a8a;padding:16px 0">Loading…</p></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://dazizawmjnmgmosefzxs.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRheml6YXdtam5tZ21vc2VmenhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTIzNzAsImV4cCI6MjA5NjkyODM3MH0.wFeHGeEv8Ufw-G5IDnhhWyvbzmzooCVj6CyM9cBLQ08';
+const { createClient } = supabase;
+const sb = createClient(SUPA_URL, SUPA_KEY);
+
+const GROUPS_DATA = [
+  {id:'A', teams:['Mexico','South Africa','South Korea','Czechia']},
+  {id:'B', teams:['Canada','Bosnia & Herz','Qatar','Switzerland']},
+  {id:'C', teams:['Brazil','Morocco','Haiti','Scotland']},
+  {id:'D', teams:['United States','Paraguay','Australia','Türkiye']},
+  {id:'E', teams:['Germany','Curaçao','Côte d\'Ivoire','Ecuador']},
+  {id:'F', teams:['Netherlands','Japan','Sweden','Tunisia']},
+  {id:'G', teams:['Belgium','Egypt','IR Iran','New Zealand']},
+  {id:'H', teams:['Spain','Cabo Verde','Saudi Arabia','Uruguay']},
+  {id:'I', teams:['France','Senegal','Iraq','Norway']},
+  {id:'J', teams:['Argentina','Algeria','Austria','Jordan']},
+  {id:'K', teams:['Portugal','Congo DR','Uzbekistan','Colombia']},
+  {id:'L', teams:['England','Croatia','Ghana','Panama']},
+];
+
+const KO_ROUNDS = [
+  { key:'r32', label:'Round of 32', matches:[
+    {id:'m74',label:'E1 vs 3rd(ABCDF)'},{id:'m77',label:'I1 vs 3rd(CDFGH)'},
+    {id:'m73',label:'A2 vs B2'},{id:'m75',label:'F1 vs C2'},
+    {id:'m83',label:'K2 vs L2'},{id:'m84',label:'H1 vs J2'},
+    {id:'m81',label:'D1 vs 3rd(BEFIJ)'},{id:'m82',label:'G1 vs 3rd(AEHIJ)'},
+    {id:'m76',label:'C1 vs F2'},{id:'m78',label:'E2 vs I2'},
+    {id:'m79',label:'A1 vs 3rd(CEFHI)'},{id:'m80',label:'L1 vs 3rd(EHIJK)'},
+    {id:'m86',label:'J1 vs H2'},{id:'m88',label:'D2 vs G2'},
+    {id:'m85',label:'B1 vs 3rd(EFGIJ)'},{id:'m87',label:'K1 vs 3rd(DEIJL)'},
+  ]},
+  { key:'r16', label:'Round of 16', matches:[
+    {id:'m89',label:'W(m74) vs W(m77)'},{id:'m90',label:'W(m73) vs W(m75)'},
+    {id:'m93',label:'W(m83) vs W(m84)'},{id:'m94',label:'W(m81) vs W(m82)'},
+    {id:'m91',label:'W(m76) vs W(m78)'},{id:'m92',label:'W(m79) vs W(m80)'},
+    {id:'m95',label:'W(m86) vs W(m88)'},{id:'m96',label:'W(m85) vs W(m87)'},
+  ]},
+  { key:'qf', label:'Quarter-Finals', matches:[
+    {id:'qf1',label:'W(M89) vs W(M90)'},{id:'qf2',label:'W(M93) vs W(M94)'},
+    {id:'qf3',label:'W(M91) vs W(M92)'},{id:'qf4',label:'W(M95) vs W(M96)'},
+  ]},
+  { key:'sf', label:'Semi-Finals', matches:[
+    {id:'sf1',label:'W(QF1) vs W(QF2)'},{id:'sf2',label:'W(QF3) vs W(QF4)'},
+  ]},
+  { key:'final', label:'Final', matches:[
+    {id:'final',label:'W(SF1) vs W(SF2)'},
+  ]},
+];
+
+let adminUser = null;
+let currentPhase = 0;
+
+// ── Admin login
+async function adminLogin() {
+  const email = document.getElementById('adminEmail').value.trim();
+  const pass  = document.getElementById('adminPass').value;
+  const errEl = document.getElementById('adminErr');
+  errEl.textContent = '';
+
+  if (!email.endsWith('@om.sa')) { errEl.textContent = '⚠ Must be an @om.sa email.'; return; }
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) { errEl.textContent = '⚠ ' + error.message; return; }
+  adminUser = data.user;
+  document.getElementById('adminAuth').style.display = 'none';
+  document.getElementById('adminApp').style.display  = 'block';
+  document.getElementById('adminUserLabel').textContent = email;
+  await loadAdminData();
+}
+
+async function adminLogout() {
+  await sb.auth.signOut();
+  location.reload();
+}
+
+// Check session on load
+window.addEventListener('DOMContentLoaded', async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    adminUser = session.user;
+    document.getElementById('adminAuth').style.display = 'none';
+    document.getElementById('adminApp').style.display  = 'block';
+    document.getElementById('adminUserLabel').textContent = session.user.email;
+    await loadAdminData();
+  }
+});
+
+// ── Load all admin data
+async function loadAdminData() {
+  await loadSettings();
+  await loadStats();
+  buildGroupResults();
+  buildKOResults();
+  await loadGroupResultValues();
+  await loadKOResultValues();
+  await loadLeaderboard();
+}
+
+// ── Load settings
+async function loadSettings() {
+  const { data } = await sb.from('settings').select('key,value');
+  const map = {};
+  (data||[]).forEach(r => map[r.key] = r.value);
+  currentPhase = parseInt(map['phase'] || '0');
+  updatePhaseButtons(currentPhase);
+
+  // Set deadline inputs
+  if (map['phase1_deadline']) {
+    const d = new Date(map['phase1_deadline']);
+    document.getElementById('dl1').value = d.toISOString().slice(0,16);
+  }
+  if (map['phase2_deadline']) {
+    const d = new Date(map['phase2_deadline']);
+    document.getElementById('dl2').value = d.toISOString().slice(0,16);
+  }
+}
+
+// ── Load stats
+async function loadStats() {
+  const { count: userCount } = await sb.from('profiles').select('*', {count:'exact',head:true});
+  const { count: ph1Count }  = await sb.from('phase1_predictions').select('user_id', {count:'exact',head:true});
+  const { count: ph2Count }  = await sb.from('phase2_predictions').select('user_id', {count:'exact',head:true});
+  document.getElementById('statUsers').textContent = userCount || 0;
+  document.getElementById('statPh1').textContent   = ph1Count  || 0;
+  document.getElementById('statPh2').textContent   = ph2Count  || 0;
+  const phaseLabels = {0:'Not Started', 1:'Phase 1', 2:'Phase 2', 3:'Closed'};
+  document.getElementById('statPhase').textContent = phaseLabels[currentPhase] || '–';
+}
+
+// ── Set phase
+async function setPhase(phase) {
+  const { error } = await sb.from('settings').upsert({key:'phase', value:String(phase), updated_at: new Date().toISOString()}, {onConflict:'key'});
+  const msg = document.getElementById('phaseMsg');
+  if (error) {
+    msg.textContent = '⚠ Error: ' + error.message; msg.className='msg err'; msg.style.display='block';
+  } else {
+    currentPhase = phase;
+    updatePhaseButtons(phase);
+    msg.textContent = '✓ Phase updated to ' + ['Not Started','Phase 1 (Groups)','Phase 2 (Knockouts)','Closed'][phase];
+    msg.className = 'msg ok'; msg.style.display = 'block';
+    await loadStats();
+    setTimeout(() => msg.style.display='none', 3000);
+  }
+}
+
+function updatePhaseButtons(phase) {
+  [0,1,2,3].forEach(i => {
+    document.getElementById(`phBtn${i}`).classList.toggle('active', i === phase);
+  });
+}
+
+// ── Save deadlines
+async function saveDeadlines() {
+  const dl1 = document.getElementById('dl1').value;
+  const dl2 = document.getElementById('dl2').value;
+  const msg = document.getElementById('dlMsg');
+
+  const upserts = [];
+  if (dl1) upserts.push({key:'phase1_deadline', value: new Date(dl1).toISOString(), updated_at: new Date().toISOString()});
+  if (dl2) upserts.push({key:'phase2_deadline', value: new Date(dl2).toISOString(), updated_at: new Date().toISOString()});
+
+  if (upserts.length === 0) { msg.textContent='No deadlines entered.'; msg.className='msg err'; msg.style.display='block'; return; }
+
+  const { error } = await sb.from('settings').upsert(upserts, {onConflict:'key'});
+  if (error) {
+    msg.textContent='⚠ '+error.message; msg.className='msg err';
+  } else {
+    msg.textContent='✓ Deadlines saved!'; msg.className='msg ok';
+  }
+  msg.style.display='block';
+  setTimeout(()=>msg.style.display='none', 3000);
+}
+
+// ── Build group results UI
+function buildGroupResults() {
+  const container = document.getElementById('resultsGroups');
+  container.innerHTML = '';
+  GROUPS_DATA.forEach(g => {
+    const div = document.createElement('div');
+    div.className = 'result-item';
+    div.innerHTML = `<label>GROUP ${g.id}</label>
+      ${['1st','2nd','3rd','4th'].map((pos,i) => `
+        <div class="result-row">
+          <span>${pos}</span>
+          <select id="g${g.id}p${i+1}" style="flex:1;background:#0a0a0a;border:1px solid #2a3a2a;border-radius:4px;color:#fff;font-size:12px;padding:5px 8px;outline:none;">
+            <option value="">-- select --</option>
+            ${g.teams.map(t=>`<option value="${t}">${t}</option>`).join('')}
+          </select>
+        </div>`).join('')}
+      <button class="result-save" onclick="saveGroupResult('${g.id}')">Save Group ${g.id}</button>
+      <div class="result-saved" id="gSaved${g.id}"></div>`;
+    container.appendChild(div);
+  });
+}
+
+// ── Load existing group results into selects
+async function loadGroupResultValues() {
+  const { data } = await sb.from('phase1_results').select('*');
+  (data||[]).forEach(row => {
+    ['pos1','pos2','pos3','pos4'].forEach((pos,i) => {
+      const el = document.getElementById(`g${row.group_id}p${i+1}`);
+      if (el && row[pos]) el.value = row[pos];
+    });
+  });
+}
+
+// ── Save single group result
+async function saveGroupResult(gid) {
+  const pos1 = document.getElementById(`g${gid}p1`).value;
+  const pos2 = document.getElementById(`g${gid}p2`).value;
+  const pos3 = document.getElementById(`g${gid}p3`).value;
+  const pos4 = document.getElementById(`g${gid}p4`).value;
+  const msgEl = document.getElementById(`gSaved${gid}`);
+
+  const { error } = await sb.from('phase1_results').upsert(
+    { group_id:gid, pos1, pos2, pos3, pos4, entered_at: new Date().toISOString() },
+    { onConflict:'group_id' }
+  );
+  if (error) { msgEl.textContent='⚠ Error saving'; msgEl.style.color='#ff4444'; }
+  else { msgEl.textContent='✓ Saved & scored!'; msgEl.style.color='#00FF00'; }
+  setTimeout(() => msgEl.textContent='', 3000);
+  await loadLeaderboard();
+}
+
+// ── Build KO results UI
+function buildKOResults() {
+  const container = document.getElementById('resultsKnockout');
+  container.innerHTML = '';
+  KO_ROUNDS.forEach(rnd => {
+    const section = document.createElement('div');
+    section.style.marginBottom = '20px';
+    section.innerHTML = `<p style="color:#8a9a8a;font-size:11px;letter-spacing:1px;margin-bottom:10px;text-transform:uppercase">${rnd.label}</p>`;
+    const grid = document.createElement('div');
+    grid.className = 'results-grid';
+    rnd.matches.forEach(match => {
+      const div = document.createElement('div');
+      div.className = 'ko-match';
+      div.innerHTML = `
+        <label>${match.label}</label>
+        <input id="ko_${rnd.key}_${match.id}" class="auth-input" style="margin-bottom:8px"
+               placeholder="Winner team name" type="text">
+        <button class="result-save" onclick="saveKOResult('${rnd.key}','${match.id}')">Save Winner</button>
+        <div class="result-saved" id="koSaved_${rnd.key}_${match.id}"></div>`;
+      grid.appendChild(div);
+    });
+    section.appendChild(grid);
+    container.appendChild(section);
+  });
+}
+
+// ── Load existing KO results
+async function loadKOResultValues() {
+  const { data } = await sb.from('phase2_results').select('*');
+  (data||[]).forEach(row => {
+    const el = document.getElementById(`ko_${row.round}_${row.match_id}`);
+    if (el && row.winner) el.value = row.winner;
+  });
+}
+
+// ── Save KO result
+async function saveKOResult(round, matchId) {
+  const winner = document.getElementById(`ko_${round}_${matchId}`).value.trim();
+  const msgEl  = document.getElementById(`koSaved_${round}_${matchId}`);
+  if (!winner) { msgEl.textContent='⚠ Enter winner name'; msgEl.style.color='#ff4444'; return; }
+
+  const { error } = await sb.from('phase2_results').upsert(
+    { round, match_id: matchId, winner, entered_at: new Date().toISOString() },
+    { onConflict:'round,match_id' }
+  );
+  if (error) { msgEl.textContent='⚠ Error: '+error.message; msgEl.style.color='#ff4444'; }
+  else { msgEl.textContent='✓ Saved & scored!'; msgEl.style.color='#00FF00'; }
+  setTimeout(() => msgEl.textContent='', 3000);
+  await loadLeaderboard();
+}
+
+// ── Results tabs
+function showResultsTab(tab) {
+  document.querySelectorAll('.rtab').forEach(b => b.classList.remove('active'));
+  document.getElementById('resultsGroups').style.display   = tab==='groups'   ? 'grid' : 'none';
+  document.getElementById('resultsKnockout').style.display = tab==='knockout' ? 'block': 'none';
+  event.target.classList.add('active');
+}
+
+// ── Leaderboard
+async function loadLeaderboard() {
+  const { data } = await sb.from('leaderboard').select('*').limit(100);
+  if (!data || data.length===0) {
+    document.getElementById('lbContent').innerHTML='<p style="color:#8a9a8a;padding:16px 0">No data yet.</p>';
+    return;
+  }
+  let html = `<table><thead><tr>
+    <th>#</th><th>Name</th><th>Email</th><th>Total</th><th>Phase 1</th><th>Phase 2</th>
+  </tr></thead><tbody>`;
+  data.forEach((row,i) => {
+    const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`;
+    html += `<tr class="${i<3?'rank-'+(i+1):''}">
+      <td>${medal}</td>
+      <td>${row.full_name||'–'}</td>
+      <td style="color:#8a9a8a;font-size:11px">${row.email}</td>
+      <td><b>${row.total_points}</b></td>
+      <td>${row.phase1_points}</td>
+      <td>${row.phase2_points}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('lbContent').innerHTML = html;
+}
+</script>
+</body>
+</html>
