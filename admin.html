@@ -251,10 +251,34 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-const SUPA_URL = 'https://dazizawmjnmgmosefzxs.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRheml6YXdtam5tZ21vc2VmenhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTIzNzAsImV4cCI6MjA5NjkyODM3MH0.wFeHGeEv8Ufw-G5IDnhhWyvbzmzooCVj6CyM9cBLQ08';
-const { createClient } = supabase;
-const sb = createClient(SUPA_URL, SUPA_KEY);
+var SUPA_URL = 'https://dazizawmjnmgmosefzxs.supabase.co';
+var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRheml6YXdtam5tZ21vc2VmenhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTIzNzAsImV4cCI6MjA5NjkyODM3MH0.wFeHGeEv8Ufw-G5IDnhhWyvbzmzooCVj6CyM9cBLQ08';
+var sb = null;
+
+function initSupabase() {
+  try {
+    if (typeof supabase !== 'undefined' && supabase.createClient) {
+      sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+      return true;
+    }
+  } catch(e) { console.error('Supabase init error:', e); }
+  return false;
+}
+
+// Try immediately, then retry every 500ms for 10 seconds
+if (!initSupabase()) {
+  var _retries = 0;
+  var _timer = setInterval(function() {
+    _retries++;
+    if (initSupabase()) {
+      clearInterval(_timer);
+      console.log('Supabase loaded after ' + _retries + ' retries');
+    } else if (_retries > 20) {
+      clearInterval(_timer);
+      document.getElementById('adminErr').textContent = '⚠ Failed to load. Please refresh the page.';
+    }
+  }, 500);
+}
 
 const GROUPS_DATA = [
   {id:'A', teams:['Mexico','South Africa','South Korea','Czechia']},
@@ -305,6 +329,12 @@ let currentPhase = 0;
 
 // ── Admin login
 async async function adminLogin() {
+  if (!sb) {
+    if (!initSupabase()) {
+      document.getElementById('adminErr').textContent = '⚠ Still loading... please wait and try again.';
+      return;
+    }
+  }
   const email = document.getElementById('adminEmail').value.trim();
   const pass  = document.getElementById('adminPass').value;
   const errEl = document.getElementById('adminErr');
