@@ -10,13 +10,13 @@
   body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; font-size: 14px; min-height: 100vh; }
 
   /* AUTH */
-  #adminAuth { position:fixed;inset:0;background:#000;z-index:999;display:flex;align-items:center;justify-content:center; }
+  #adminAuth { position:fixed;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;background:#000;z-index:999999;display:flex;align-items:center;justify-content:center; }
   .auth-box { background:#0d110d;border:1px solid #00FF00;border-radius:12px;padding:36px;width:360px;display:flex;flex-direction:column;gap:14px; }
   .auth-box h2 { color:#00FF00;font-size:18px;text-align:center;letter-spacing:1px; }
   .auth-box p  { color:#8a9a8a;font-size:12px;text-align:center; }
   .auth-input  { background:#111;border:1px solid #2a3a2a;border-radius:6px;color:#fff;font-size:14px;padding:10px 14px;width:100%;outline:none; }
   .auth-input:focus { border-color:#00FF00; }
-  .auth-btn    { background:#00FF00;color:#000;border:none;border-radius:6px;font-size:14px;font-weight:600;padding:11px;cursor:pointer; }
+  .auth-btn    { background:#00FF00;color:#000;border:none;border-radius:6px;font-size:14px;font-weight:600;padding:14px;cursor:pointer;position:relative;z-index:10;-webkit-tap-highlight-color:rgba(0,255,0,.3);touch-action:manipulation; }
   .auth-btn:hover { opacity:.85; }
   .auth-err    { color:#ff4444;font-size:12px;text-align:center;min-height:16px; }
 
@@ -235,6 +235,22 @@
 </div>
 
 <script>
+
+// Fallback: attach click listener to Sign In button after DOM loads
+document.addEventListener('DOMContentLoaded', function() {
+  var btn = document.querySelector('.auth-btn');
+  if (btn) {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      adminLogin();
+    });
+    btn.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      adminLogin();
+    });
+  }
+});
+
 const SUPA_URL = 'https://dazizawmjnmgmosefzxs.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRheml6YXdtam5tZ21vc2VmenhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTIzNzAsImV4cCI6MjA5NjkyODM3MH0.wFeHGeEv8Ufw-G5IDnhhWyvbzmzooCVj6CyM9cBLQ08';
 const { createClient } = supabase;
