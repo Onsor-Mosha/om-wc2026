@@ -884,23 +884,23 @@ function scaleBracket(){
   var page = document.querySelector('.page');
   if(!page) return;
   var ao=document.getElementById('authOverlay'); if(ao&&ao.style.display!=='none') return;
-  // Reset to measure natural width
+  // Reset transform to measure natural dimensions
   page.style.transform = '';
   page.style.transformOrigin = '';
+  // Recalc cell heights BEFORE scaling (measurements must be unscaled)
+  if(typeof recalcCellHeights === 'function') recalcCellHeights();
   var vw = window.innerWidth;
   var pw = page.scrollWidth;
   if(pw > vw){
     var s = vw / pw;
     page.style.transform = 'scale(' + s + ')';
     page.style.transformOrigin = 'top left';
-    // Set container height to match scaled content, hide overflow on body
     document.body.style.height = (page.scrollHeight * s + 120) + 'px';
     document.body.style.overflowX = 'hidden';
   } else {
     document.body.style.height = '';
   }
-  // Redraw connector lines after scaling
-  if(typeof recalcCellHeights === 'function') recalcCellHeights();
+  // Redraw connector lines AFTER scaling
   if(typeof drawLines === 'function') setTimeout(drawLines, 100);
 }
 window.addEventListener('resize', function(){ requestAnimationFrame(function(){ scaleBracket(); if(typeof drawLines==='function') setTimeout(drawLines,100); }); });
