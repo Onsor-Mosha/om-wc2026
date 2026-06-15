@@ -214,7 +214,19 @@
     </div>
 
     <!-- LEADERBOARD -->
-    <div class="card">
+    
+  <!-- Reset User Predictions -->
+  <div class="card" style="margin-top:20px;">
+    <h3>Reset User Predictions</h3>
+    <p style="color:#8a9a8a;font-size:13px;">Clear a user's submitted predictions so they can re-submit.</p>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:10px;">
+      <input type="email" id="resetUserEmail" placeholder="user@om.sa" style="flex:1;padding:10px;border-radius:6px;border:1px solid #333;background:#1a1a1a;color:#fff;font-size:14px;">
+      <button onclick="resetUserPredictions()" style="padding:10px 20px;background:#ff4444;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Reset</button>
+    </div>
+    <span id="resetMsg" style="display:block;margin-top:8px;font-size:13px;"></span>
+  </div>
+
+<div class="card">
       <h3>🏆 Leaderboard <button class="refresh-btn" onclick="loadLeaderboard()">↺ Refresh</button></h3>
       <div id="lbContent"><p style="color:#8a9a8a;padding:16px 0">Loading…</p></div>
     </div>
@@ -407,7 +419,7 @@ function buildGroupResults() {
       ${['1st','2nd','3rd','4th'].map((pos,i) => `
         <div class="result-row">
           <span>${pos}</span>
-          <select id="g${g.id}p${i+1}" style="flex:1;background:#0a0a0a;border:1px solid #2a3a2a;border-radius:4px;color:#fff;font-size:12px;padding:5px 8px;outline:none;">
+          <select id="g${g.id}p${i+1}" onchange="preventDuplicates('${g.id}', ${i+1})" style="flex:1;background:#0a0a0a;border:1px solid #2a3a2a;border-radius:4px;color:#fff;font-size:12px;padding:5px 8px;outline:none;">
             <option value="">-- select --</option>
             ${g.teams.map(t=>`<option value="${t}">${t}</option>`).join('')}
           </select>
@@ -426,6 +438,7 @@ async function loadGroupResultValues() {
       const el = document.getElementById(`g${row.group_id}p${i+1}`);
       if (el && row[pos]) el.value = row[pos];
     });
+    preventDuplicates(row.group_id, null);
   });
 }
 
@@ -436,6 +449,41 @@ async function saveGroupResult(gid) {
   const pos3 = document.getElementById(`g${gid}p3`).value;
   const pos4 = document.getElementById(`g${gid}p4`).value;
   const msgEl = document.getElementById(`gSaved${gid}`);
+
+  // Validate: all positions must be filled
+  if (!pos1 || !pos2 || !pos3 || !pos4) {
+    msgEl.textContent = '⚠ Please select all 4 positions';
+    msgEl.style.color = '#ff4444';
+    return;
+  }
+  // Validate: no duplicates
+  const teams = [pos1, pos2, pos3, pos4];
+  const unique = new Set(teams);
+  if (unique.size !== 4) {
+    msgEl.textContent = '⚠ Each team must appear only once';
+    msgEl.style.color = '#ff4444';
+    return;
+  }
+
+  // Check all positions filled
+  if (!pos1 || !pos2 || !pos3 || !pos4) {
+    msgEl.textContent = '⚠ Please select all 4 positions';
+    msgEl.style.color = '#ff4444';
+    return;
+  }
+  // Check no duplicates
+  const vals = [pos1, pos2, pos3, pos4];
+  const unique = new Set(vals);
+  if (unique.size !== 4) {
+    msgEl.textContent = '⚠ Each team can only be selected once';
+    msgEl.style.color = '#ff4444';
+    return;
+  }
+
+  // Check for duplicates
+  const vals = [pos1,pos2,pos3,pos4].filter(v=>v);
+  const unique = new Set(vals);
+  if(vals.length !== unique.size){ msgEl.textContent='⚠ Duplicate teams selected!'; msgEl.style.color='#ff4444'; return; }
 
   const { error } = await sb.from('phase1_results').upsert(
     { group_id:gid, pos1, pos2, pos3, pos4, entered_at: new Date().toISOString() },
@@ -529,6 +577,56 @@ async function loadLeaderboard() {
   });
   html += '</tbody></table>';
   document.getElementById('lbContent').innerHTML = html;
+}
+
+async function resetUserPredictions() {
+  const email = document.getElementById('resetUserEmail').value.trim();
+  const msgEl = document.getElementById('resetMsg');
+  if (!email) { msgEl.textContent = '⚠ Enter an email'; msgEl.style.color = '#ff4444'; return; }
+  
+  if (!confirm('Are you sure you want to reset predictions for ' + email + '? This cannot be undone.')) return;
+  
+  // Find user by email
+  const { data: profile } = await sb.from('profiles').select('id').eq('email', email).single();
+  if (!profile) { msgEl.textContent = '⚠ User not found'; msgEl.style.color = '#ff4444'; return; }
+  
+  // Delete their predictions
+  await sb.from('phase1_predictions').delete().eq('user_id', profile.id);
+  await sb.from('phase2_predictions').delete().eq('user_id', profile.id);
+  
+  msgEl.textContent = '✓ Predictions cleared for ' + email;
+  msgEl.style.color = '#00FF00';
+  setTimeout(() => msgEl.textContent = '', 4000);
+  await loadLeaderboard();
+}
+
+function preventDuplicates(gid, changedPos) {
+  var selects = [1,2,3,4].map(i => document.getElementById('g' + gid + 'p' + i));
+  
+  // If a specific position just changed, check if its value is taken
+  if (changedPos) {
+    var changedSel = document.getElementById('g' + gid + 'p' + changedPos);
+    var newVal = changedSel.value;
+    if (newVal) {
+      selects.forEach(function(sel, idx) {
+        if ((idx + 1) != changedPos && sel.value === newVal) {
+          sel.value = ''; // Clear the old one that had this team
+        }
+      });
+    }
+  }
+  
+  var chosen = selects.map(s => s.value);
+  
+  selects.forEach(function(sel, idx) {
+    var options = sel.querySelectorAll('option');
+    options.forEach(function(opt) {
+      if (opt.value === '') return;
+      var takenByOther = chosen.some(function(v, i) { return i !== idx && v === opt.value; });
+      opt.disabled = takenByOther;
+      opt.style.color = takenByOther ? '#555' : '#fff';
+    });
+  });
 }
 </script>
 </body>
