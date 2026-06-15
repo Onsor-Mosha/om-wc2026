@@ -4,7 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OM WC2026 — Admin Panel</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
+<script>
+// Fallback loader if primary CDN fails
+window.addEventListener('DOMContentLoaded', function() {
+  if (typeof supabase === 'undefined') {
+    var s = document.createElement('script');
+    s.src = 'https://unpkg.com/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js';
+    s.onload = function() { if (typeof initSupabase === 'function') initSupabase(); };
+    document.head.appendChild(s);
+  }
+});
+</script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; font-size: 14px; min-height: 100vh; }
@@ -235,6 +246,12 @@
 </div>
 
 <script>
+// Global error handler to surface silent errors
+window.onerror = function(msg, src, line, col, err) {
+  var e = document.getElementById('adminErr');
+  if (e) e.textContent = '⚠ JS Error: ' + msg + ' (line ' + line + ')';
+  return false;
+};
 
 // Fallback: attach click listener to Sign In button after DOM loads
 document.addEventListener('DOMContentLoaded', function() {
@@ -328,7 +345,7 @@ let adminUser = null;
 let currentPhase = 0;
 
 // ── Admin login
-async function adminLogin() {
+window.adminLogin = async function adminLogin() {
   if (!sb) {
     if (!initSupabase()) {
       document.getElementById('adminErr').textContent = '⚠ Still loading... please wait and try again.';

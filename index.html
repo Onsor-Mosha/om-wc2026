@@ -34,7 +34,8 @@
   * { box-sizing:border-box; margin:0; padding:0; }
   body { background:var(--bg); color:var(--text); font-family:'OM',sans-serif; font-weight:300; font-size:13px; overflow-x:hidden; overflow-y:auto; -webkit-overflow-scrolling:touch; margin:0; padding:0; }
 
-  header { background:linear-gradient(135deg,#000000,#0a120a,#000000); border-bottom:2px solid var(--gold); padding:12px 20px; display:flex; align-items:center; justify-content:space-between; position:fixed; top:0; left:0; width:100vw; z-index:200; box-sizing:border-box; }
+  html { overflow-x:hidden; width:100%; }
+  header { background:linear-gradient(135deg,#000000,#0a120a,#000000); border-bottom:2px solid var(--gold); padding:12px 20px; display:flex; align-items:center; justify-content:space-between; position:fixed; top:0; left:0; right:0; width:100%; z-index:200; box-sizing:border-box; overflow:hidden; }
   header h1 { font-family:'OM',sans-serif; font-weight:500; font-size:24px; letter-spacing:2px; color:#000; margin:0; }
   header .sub { color:var(--muted); font-size:10px; margin-top:1px; letter-spacing:1px; }
   .reset-btn { background:transparent; border:1px solid var(--border); color:var(--muted); padding:5px 12px; border-radius:5px; cursor:pointer; font-size:11px; }
@@ -180,8 +181,10 @@
   }
 
   @media (max-width: 768px) {
-    header { flex-direction:column; gap:10px; padding:10px 12px; }
-    header > div { flex-direction:column !important; align-items:center !important; text-align:center; }
+    header { flex-direction:column; gap:10px; padding:10px 12px; left:0 !important; right:0 !important; width:100% !important; max-width:100vw !important; }
+    header > div { flex-direction:column !important; align-items:center !important; text-align:center; width:100% !important; }
+    header span[style*="font-size:22px"] { font-size:13px !important; letter-spacing:1px !important; padding:3px 8px !important; margin-left:0 !important; }
+    header .logos img, header div[style*="gap:14px"] img { height:30px !important; }
     header h1 { font-size:16px !important; }
     header div[style*="font-size:24px"] { font-size:14px !important; }
     .reset-btn { margin-top:6px; }
@@ -257,7 +260,16 @@
   .lmsg{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111;border:1px solid #ff8800;color:#ff8800;padding:8px 20px;border-radius:6px;font-size:12px;z-index:999997;display:none;}
 
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+  if (typeof supabase === 'undefined') {
+    var s = document.createElement('script');
+    s.src = 'https://unpkg.com/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js';
+    document.head.appendChild(s);
+  }
+});
+</script>
 </head>
 <body class="auth-active">
 <header>
@@ -283,7 +295,7 @@
 
 <div id="vpWrapper">
 <div id="vpInner">
-<div class="page" id="page">
+<div id="bracketWrapper" style="overflow:hidden;width:100%;max-width:100vw;"><div class="page" id="page">
   <svg id="connectors"></svg>
   <div class="groups-panel" id="leftGroups"></div>
   <div class="bracket-half left"  id="bracketLeft"></div>
@@ -707,6 +719,7 @@ function drawLines(){
 
 // ═══════════ INTERACTIONS ═══════════
 function cycleTeam(gid,ti){
+  if(_submitted){return;}
   const s=sel[gid], cur=s[ti];
   const c={'1st':0,'2nd':0,'3rd':0,'4th':0};
   Object.values(s).forEach(v=>{if(v)c[v]++;});
@@ -768,6 +781,7 @@ function pickWinner(round,mi,si){
 }
 
 function resetAll(){
+  if(_submitted){alert('Your predictions are locked. Contact admin to reset.');return;}
   if(!confirm('Are you sure you want to reset all predictions? This will clear your saved answers.')) return;
   GROUPS.forEach(g=>g.teams.forEach((_,i)=>sel[g.id][i]=null));
   clearKO(0);
@@ -821,6 +835,7 @@ window.addEventListener('resize',()=>requestAnimationFrame(drawLines));
 </div>
 <div id="lbModal"><div class="lbox"><h3>🏆 Live Leaderboard</h3><div class="ltbl" id="lTbl"></div><button onclick="document.getElementById('lbModal').classList.remove('show')">Close</button></div></div>
 <div class="lmsg" id="lMsg"></div>
+</div><!-- bracketWrapper -->
 <script>
 var _sb=null,_user=null,_tab='login',_phase=0,_p1lock=true,_p2lock=true,_lt=null;
 function $(id){return document.getElementById(id)}
@@ -829,7 +844,21 @@ function authGo(){var em=$('aEmail').value.trim(),pw=$('aPass').value,nm=$('aNam
 function onLogin(){$('authOverlay').style.display='none';document.body.classList.remove('auth-active');setTimeout(function(){checkLandscapeHint();scaleBracket()},200);$('compBar').style.display='flex';_sb.from('profiles').select('full_name').eq('id',_user.id).single().then(function(r){$('cU').textContent=(r.data&&r.data.full_name)||_user.email.split('@')[0]});_sb.from('settings').select('key,value').then(function(r){var m={};(r.data||[]).forEach(function(x){m[x.key]=x.value});_phase=parseInt(m['phase']||'0');var now=new Date();_p1lock=_phase!==1||!!(m['phase1_deadline']&&now>new Date(m['phase1_deadline']));_p2lock=_phase!==2||!!(m['phase2_deadline']&&now>new Date(m['phase2_deadline']));var lbl={0:'⏳ Not started',1:'📋 Phase 1: Groups',2:'🏆 Phase 2: Knockouts',3:'🔒 Closed'};$('cPh').textContent=lbl[_phase]||'';$('bSv').style.display=((_phase===1&&!_p1lock)||(_phase===2&&!_p2lock))?'block':'none';doLock();loadPreds();loadPts()})}
 function doLock(){if(!window._origCT)window._origCT=window.cycleTeam;if(!window._origPW)window._origPW=window.pickWinner;window.cycleTeam=function(g,t){if(_phase!==1||_p1lock){flashLock('Group predictions are locked.');return};window._origCT(g,t)};window.pickWinner=function(r,m,s){if(_phase!==2){flashLock('Knockout predictions open in Phase 2.');return};if(_p2lock){flashLock('Phase 2 is locked.');return};window._origPW(r,m,s)}}
 function flashLock(msg){$('lMsg').textContent=msg;$('lMsg').style.display='block';clearTimeout(_lt);_lt=setTimeout(function(){$('lMsg').style.display='none'},2500)}
-function loadPreds(){if(_phase<1)return;_sb.from('phase1_predictions').select('*').eq('user_id',_user.id).then(function(r){if(!r.data||!r.data.length)return;var w=_p1lock;_p1lock=false;r.data.forEach(function(row){var g=GROUPS.find(function(g){return g.id===row.group_id});if(!g)return;['pos1','pos2','pos3','pos4'].forEach(function(p,i){if(!row[p])return;var ti=g.teams.findIndex(function(t){return t.name===row[p]});if(ti!==-1)sel[row.group_id][ti]=['1st','2nd','3rd','4th'][i]})});_p1lock=w;updateGroups();updateBracket()})}
+function loadPreds(){if(_phase<1)return;_sb.from('phase1_predictions').select('*').eq('user_id',_user.id).then(function(r){if(!r.data||!r.data.length)return;var w=_p1lock;_p1lock=false;r.data.forEach(function(row){var g=GROUPS.find(function(g){return g.id===row.group_id});if(!g)return;['pos1','pos2','pos3','pos4'].forEach(function(p,i){if(!row[p])return;var ti=g.teams.findIndex(function(t){return t.name===row[p]});if(ti!==-1)sel[row.group_id][ti]=['1st','2nd','3rd','4th'][i]})});_p1lock=w;updateGroups();updateBracket();lockAfterSubmit()})}
+
+function lockAfterSubmit(){
+  _submitted=true;
+  // Hide submit button, show submitted message
+  var b=$('bSv');
+  if(b){b.textContent='✓ Submitted';b.style.background='#333';b.disabled=true;b.style.cursor='default';b.style.boxShadow='none';}
+  // Hide reset button
+  var rb=document.querySelector('.reset-btn');
+  if(rb)rb.style.display='none';
+  // Show locked message in instructions
+  var inst=document.querySelector('.instructions');
+  if(inst)inst.innerHTML='<span style="color:#00FF00;">✓ Your predictions have been submitted and locked, wait for the next round of 32</span>';
+}
+
 function savePreds(){if(!_user)return;var b=$('bSv');
   // Validation: check all groups are complete
   var incomplete=[];
@@ -843,7 +872,7 @@ function savePreds(){if(!_user)return;var b=$('bSv');
     alert(msg);
     return;
   }
-  b.textContent='Saving...';b.disabled=true;var rows=GROUPS.map(function(g){var s=sel[g.id];function ft(rank){var i=Object.keys(s).find(function(i){return s[i]===rank});return i!==undefined?g.teams[parseInt(i)].name:null};return{user_id:_user.id,group_id:g.id,pos1:ft('1st'),pos2:ft('2nd'),pos3:ft('3rd'),pos4:ft('4th'),submitted_at:new Date().toISOString()}});_sb.from('phase1_predictions').upsert(rows,{onConflict:'user_id,group_id'}).then(function(r){if(r.error){b.textContent='Error';b.style.background='#ff4444';b.disabled=false;return};b.textContent='Saved!';b.style.background='#00cc00';loadPts();setTimeout(function(){b.textContent='Submit Predictions';b.style.background='#00FF00';b.disabled=false},2200)})}
+  b.textContent='Saving...';b.disabled=true;var rows=GROUPS.map(function(g){var s=sel[g.id];function ft(rank){var i=Object.keys(s).find(function(i){return s[i]===rank});return i!==undefined?g.teams[parseInt(i)].name:null};return{user_id:_user.id,group_id:g.id,pos1:ft('1st'),pos2:ft('2nd'),pos3:ft('3rd'),pos4:ft('4th'),submitted_at:new Date().toISOString()}});_sb.from('phase1_predictions').upsert(rows,{onConflict:'user_id,group_id'}).then(function(r){if(r.error){b.textContent='Error';b.style.background='#ff4444';b.disabled=false;return};b.textContent='✓ Submitted';b.style.background='#333';loadPts();lockAfterSubmit()})}
 function loadPts(){_sb.from('leaderboard').select('total_points,phase1_points,phase2_points').eq('id',_user.id).single().then(function(r){if(!r.data)return;$('cPW').style.display='inline';$('cPt').textContent=r.data.total_points+' (Ph1:'+r.data.phase1_points+' Ph2:'+r.data.phase2_points+')'})}
 function showLb(){$('lbModal').classList.add('show');$('lTbl').innerHTML='<p style="color:#8a9a8a;text-align:center;padding:20px">Loading...</p>';_sb.from('leaderboard').select('*').limit(100).then(function(r){if(!r.data||!r.data.length){$('lTbl').innerHTML='<p style="color:#8a9a8a;padding:20px;text-align:center">No predictions yet.</p>';return};var h='<table><thead><tr><th>#</th><th>Name</th><th>Total</th><th>Ph1</th><th>Ph2</th></tr></thead><tbody>';r.data.forEach(function(row,i){var m=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);var me=_user&&row.id===_user.id;h+='<tr'+(me?' style="background:rgba(0,255,0,.06)"':'')+'><td>'+m+'</td><td>'+(row.full_name||row.email.split('@')[0])+(me?' 👈':'')+'</td><td><b>'+row.total_points+'</b></td><td>'+row.phase1_points+'</td><td>'+row.phase2_points+'</td></tr>'});$('lTbl').innerHTML=h+'</tbody></table>'})}
 function doSignOut(){_sb.auth.signOut().then(function(){_user=null;$('authOverlay').style.display='flex';$('compBar').style.display='none';document.body.classList.add('auth-active')})}
@@ -862,14 +891,21 @@ function scaleBracket(){
   var vw = window.innerWidth;
   var pw = page.scrollWidth;
   if(pw > vw){
-    var s = (vw - 4) / pw; // 4px breathing room
+    var s = (vw) / pw;
     page.style.transform = 'scale(' + s + ')';
     page.style.transformOrigin = 'top left';
-    page.style.width = (100/s) + '%';
-    var ph = page.scrollHeight * s;
-    document.body.style.minHeight = ph + 'px';
+    page.style.width = pw + 'px';
+    // Set wrapper height to match scaled content
+    var wrapper = document.getElementById('bracketWrapper');
+    if(wrapper){
+      wrapper.style.height = (page.scrollHeight * s) + 'px';
+      wrapper.style.overflow = 'hidden';
+    }
   } else {
-    document.body.style.minHeight = '';
+    page.style.transform = '';
+    page.style.width = '';
+    var wrapper = document.getElementById('bracketWrapper');
+    if(wrapper){ wrapper.style.height = ''; wrapper.style.overflow = ''; }
   }
 }
 window.addEventListener('resize', function(){ requestAnimationFrame(function(){ scaleBracket(); if(typeof drawLines==='function') setTimeout(drawLines,100); }); });
