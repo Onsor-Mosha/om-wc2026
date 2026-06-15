@@ -419,7 +419,7 @@ function buildGroupResults() {
       ${['1st','2nd','3rd','4th'].map((pos,i) => `
         <div class="result-row">
           <span>${pos}</span>
-          <select id="g${g.id}p${i+1}" onchange="preventDuplicates('${g.id}', ${i+1})" style="flex:1;background:#0a0a0a;border:1px solid #2a3a2a;border-radius:4px;color:#fff;font-size:12px;padding:5px 8px;outline:none;">
+          <select id="g${g.id}p${i+1}" data-group="${g.id}" data-pos="${i+1}" style="flex:1;background:#0a0a0a;border:1px solid #2a3a2a;border-radius:4px;color:#fff;font-size:12px;padding:5px 8px;outline:none;">
             <option value="">-- select --</option>
             ${g.teams.map(t=>`<option value="${t}">${t}</option>`).join('')}
           </select>
@@ -438,7 +438,7 @@ async function loadGroupResultValues() {
       const el = document.getElementById(`g${row.group_id}p${i+1}`);
       if (el && row[pos]) el.value = row[pos];
     });
-    preventDuplicates(row.group_id, null);
+    preventDuplicates(row.group_id);
   });
 }
 
@@ -601,33 +601,46 @@ async function resetUserPredictions() {
 }
 
 function preventDuplicates(gid, changedPos) {
-  var selects = [1,2,3,4].map(i => document.getElementById('g' + gid + 'p' + i));
+  var sels = [1,2,3,4].map(function(i){ return document.getElementById('g'+gid+'p'+i); });
+  if (!sels[0]) return;
   
-  // If a specific position just changed, check if its value is taken
+  // If a position just changed, clear any other position that has the same team
   if (changedPos) {
-    var changedSel = document.getElementById('g' + gid + 'p' + changedPos);
-    var newVal = changedSel.value;
-    if (newVal) {
-      selects.forEach(function(sel, idx) {
-        if ((idx + 1) != changedPos && sel.value === newVal) {
-          sel.value = ''; // Clear the old one that had this team
+    var changed = sels[changedPos - 1];
+    var val = changed.value;
+    if (val) {
+      for (var i = 0; i < 4; i++) {
+        if (i !== (changedPos - 1) && sels[i].value === val) {
+          sels[i].value = '';
         }
-      });
+      }
     }
   }
   
-  var chosen = selects.map(s => s.value);
-  
-  selects.forEach(function(sel, idx) {
-    var options = sel.querySelectorAll('option');
-    options.forEach(function(opt) {
-      if (opt.value === '') return;
-      var takenByOther = chosen.some(function(v, i) { return i !== idx && v === opt.value; });
-      opt.disabled = takenByOther;
-      opt.style.color = takenByOther ? '#555' : '#fff';
-    });
-  });
+  // Disable already-chosen options in all selects
+  var chosen = sels.map(function(s){ return s.value; });
+  for (var i = 0; i < 4; i++) {
+    var opts = sels[i].getElementsByTagName('option');
+    for (var j = 0; j < opts.length; j++) {
+      if (!opts[j].value) continue;
+      var taken = false;
+      for (var k = 0; k < 4; k++) {
+        if (k !== i && chosen[k] === opts[j].value) { taken = true; break; }
+      }
+      opts[j].disabled = taken;
+      opts[j].style.color = taken ? '#555' : '#fff';
+    }
+  }
 }
+
+// Event delegation for all group selects
+document.addEventListener('change', function(e) {
+  var sel = e.target;
+  if (sel.tagName === 'SELECT' && sel.dataset.group && sel.dataset.pos) {
+    preventDuplicates(sel.dataset.group, parseInt(sel.dataset.pos));
+  }
+});
+
 </script>
 </body>
 </html>
