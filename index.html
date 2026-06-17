@@ -624,8 +624,11 @@ function updateBracket(){
 // ═══════════ DRAW CONNECTOR LINES ═══════════
 function drawLines(){
   const svg=document.getElementById('connectors');
+  if(!svg) return;
   svg.innerHTML='';
   const pageEl=document.getElementById('page');
+  // Force a reflow read so all heights are settled before measuring
+  void pageEl.offsetHeight;
   const pageRect=pageEl.getBoundingClientRect();
   // Detect CSS scale factor (transform:scale applied for responsive)
   const cs=window.getComputedStyle(pageEl).transform;
@@ -868,9 +871,18 @@ try{_sb=window.supabase.createClient('https://dazizawmjnmgmosefzxs.supabase.co',
 function recalcCellHeights(){
   var cards = document.querySelectorAll('#leftGroups .group-card');
   if(cards.length < 2) return;
+  // Account for any current scale so heights are in unscaled units
+  var pageEl = document.getElementById('page');
+  var scale = 1;
+  if(pageEl){
+    var cs = window.getComputedStyle(pageEl).transform;
+    if(cs && cs !== 'none'){ var m = cs.match(/matrix\(([^,]+)/); if(m) scale = parseFloat(m[1]) || 1; }
+  }
   var top = cards[0].getBoundingClientRect().top;
   var bottom = cards[cards.length-1].getBoundingClientRect().bottom;
-  var exactH = bottom - top;
+  var exactH = (bottom - top) / scale;
+  // Guard: skip if layout not ready (cards not rendered)
+  if(exactH < 100) return;
   
   var r32 = document.querySelectorAll('#bracketLeft .rcol:nth-child(1) .match-cell, #bracketRight .rcol:nth-child(1) .match-cell');
   var r16 = document.querySelectorAll('#bracketLeft .rcol:nth-child(2) .match-cell, #bracketRight .rcol:nth-child(2) .match-cell');
@@ -890,8 +902,6 @@ function scaleBracket(){
   // Reset transform to measure natural dimensions
   page.style.transform = '';
   page.style.transformOrigin = '';
-  // Recalc cell heights BEFORE scaling (measurements must be unscaled)
-  if(typeof recalcCellHeights === 'function') recalcCellHeights();
   var vw = window.innerWidth;
   var pw = page.scrollWidth;
   if(pw > vw){
@@ -914,9 +924,18 @@ function relayout(){
   _relayoutPending = true;
   requestAnimationFrame(function(){
     requestAnimationFrame(function(){
+      // 1. Reset scale to measure natural sizes
+      var pageEl = document.getElementById('page');
+      if(pageEl){ pageEl.style.transform=''; pageEl.style.transformOrigin=''; }
+      // 2. Recalc heights at natural size
       recalcCellHeights();
-      scaleBracket();
-      _relayoutPending = false;
+      // 3. Force reflow so new heights apply
+      if(pageEl) void pageEl.offsetHeight;
+      // 4. Apply scale + draw lines (next frame so heights settle)
+      requestAnimationFrame(function(){
+        scaleBracket();
+        _relayoutPending = false;
+      });
     });
   });
 }
