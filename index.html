@@ -120,8 +120,8 @@
   .final-match-box .match-slot.winner { background:var(--win-bg); border-left:3px solid var(--win-bdr); }
   .final-match-box .match-slot.empty { cursor:default; color:var(--muted); font-size:10px; font-style:italic; }
   .match-slot.r32-label { font-style:normal !important; color:var(--text) !important; font-size:11px !important; font-weight:500 !important; letter-spacing:0.5px; }
-  .champ-card { background:linear-gradient(135deg,#001a00,#002800); border:2px solid var(--gold); border-radius:9px; padding:8px 10px; text-align:center; position:absolute; top:62%; left:50%; transform:translateX(-50%); width:90%; z-index:2; }
-  .champ-label { font-family:'OM',sans-serif; font-weight:500; font-size:10px; letter-spacing:2px; color:var(--gold); margin-bottom:4px; }
+  .champ-card { background:linear-gradient(135deg,#001a00,#002800); border:2px solid var(--gold); border-radius:9px; padding:10px 14px; text-align:center; position:absolute; top:60%; left:50%; transform:translateX(-50%); width:100%; min-width:200px; z-index:2; white-space:nowrap; }
+  .champ-label { font-family:'OM',sans-serif; font-weight:500; font-size:11px; letter-spacing:1.5px; color:var(--gold); margin-bottom:3px; }
   .champ-team { font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:5px; }
   .champ-flag-em { font-size:20px; line-height:1; }
 
@@ -703,6 +703,17 @@ function drawLines(){
       seg(sx,      rs.midY, sx,        rf.midY); // drop to finalBoxB midY
       seg(sx,      rf.midY, rf.right+1,rf.midY); // enter finalBoxB right
     }
+  }
+  // Connect final boxes down to champion
+  var fboxA=document.getElementById('finalBoxA'), fboxB=document.getElementById('finalBoxB'), champ=document.querySelector('.champ-card');
+  if(fboxA&&fboxB&&champ){
+    var ra=toPage(fboxA), rb=toPage(fboxB), rc=toPage(champ);
+    var cx=(ra.left+rb.right)/2; // center between the two boxes
+    var midY=(Math.max(ra.bottom,rb.bottom)+rc.top)/2;
+    seg(ra.midX, ra.bottom, ra.midX, midY);   // down from box A
+    seg(rb.midX, rb.bottom, rb.midX, midY);   // down from box B
+    seg(ra.midX, midY, rb.midX, midY);        // horizontal join
+    seg(cx, midY, cx, rc.top);                // down to champion
   }
   svg.setAttribute('width',pageEl.scrollWidth); svg.setAttribute('height',pageEl.scrollHeight); svg.style.transformOrigin='top left';
 }
