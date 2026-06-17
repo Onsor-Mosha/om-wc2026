@@ -92,20 +92,19 @@
   .s-check { color:var(--green); font-size:9px; }
 
   /* ── FINAL CENTER ── */
-  .final-center { flex:0 0 auto; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; align-self:stretch; gap:10px; padding:40px 8px 0; position:relative; z-index:1; width:280px; }
-  .final-label { font-family:'OM',sans-serif; font-weight:500; font-size:14px; letter-spacing:2px; color:var(--gold); text-align:center; }
-  .trophy-svg { display:block; margin:0 auto; filter:drop-shadow(0 0 16px rgba(245,166,35,.9)); }
+  .final-center { flex:0 0 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:0 8px; padding-top:5%; }
+  .final-label { font-family:'OM',sans-serif; font-weight:500; font-size:13px; letter-spacing:2px; color:var(--gold); text-align:center; margin-bottom:2px; }
+  .trophy-svg { display:block; margin:0 auto; filter:drop-shadow(0 0 12px rgba(245,166,35,.8)); }
   .final-match { width:100%; margin-top:8px; }
   .final-boxes-row {
-    display:flex; flex-direction:row; gap:8px; width:100%;
+    display:flex; flex-direction:row; gap:6px; margin-top:20px;
   }
   .final-match-box {
     background:var(--card);
     border:2px solid #8899aa !important;
-    border-radius:8px;
+    border-radius:6px;
     box-shadow:0 0 8px rgba(136,153,170,0.3);
     overflow:hidden;
-    flex:1;
   }
   .final-match-box .match-slot {
     min-height:32px;
@@ -119,8 +118,8 @@
   .final-match-box .match-slot.winner { background:var(--win-bg); border-left:3px solid var(--win-bdr); }
   .final-match-box .match-slot.empty { cursor:default; color:var(--muted); font-size:10px; font-style:italic; }
   .match-slot.r32-label { font-style:normal !important; color:var(--text) !important; font-size:11px !important; font-weight:500 !important; letter-spacing:0.5px; }
-  .champ-card { background:linear-gradient(135deg,#001a00,#002800); border:2px solid var(--gold); border-radius:9px; padding:10px 8px; text-align:center; width:100%; max-width:240px; box-shadow:0 0 16px rgba(0,255,0,.3); box-sizing:border-box; }
-  .champ-label { font-family:'OM',sans-serif; font-weight:500; font-size:10px; letter-spacing:1px; color:var(--gold); margin-bottom:3px; white-space:nowrap; }
+  .champ-card { background:linear-gradient(135deg,#001a00,#002800); border:2px solid var(--gold); border-radius:9px; padding:8px 10px; text-align:center; width:100%; }
+  .champ-label { font-family:'OM',sans-serif; font-weight:500; font-size:10px; letter-spacing:2px; color:var(--gold); margin-bottom:4px; }
   .champ-team { font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:5px; }
   .champ-flag-em { font-size:20px; line-height:1; }
 
@@ -586,9 +585,24 @@ function buildBracket(){
       fcEl.style.minWidth = (mw * 2 + gap + 16) + 'px';
     }
 
-    recalcCellHeights();
+    // Step 2: measure exact span from first → last group card
+    const cards = [...document.querySelectorAll('#leftGroups .group-card')];
+    if(cards.length >= 2){
+      const top    = cards[0].getBoundingClientRect().top;
+      const bottom = cards[cards.length-1].getBoundingClientRect().bottom;
+      const exactH = bottom - top;
+      const r32Cells = [...document.querySelectorAll('#bracketLeft .rcol:nth-child(1) .match-cell, #bracketRight .rcol:nth-child(1) .match-cell')];
+      const r16Cells = [...document.querySelectorAll('#bracketLeft .rcol:nth-child(2) .match-cell, #bracketRight .rcol:nth-child(2) .match-cell')];
+      const qfCells  = [...document.querySelectorAll('#bracketLeft .rcol:nth-child(3) .match-cell, #bracketRight .rcol:nth-child(3) .match-cell')];
+      const sfCells  = [...document.querySelectorAll('#bracketLeft .rcol:nth-child(4) .match-cell, #bracketRight .rcol:nth-child(4) .match-cell')];
+      r32Cells.forEach(el => el.style.height = (exactH/8)  + 'px');
+      r16Cells.forEach(el => el.style.height = (exactH/4)  + 'px');
+      qfCells .forEach(el => el.style.height = (exactH/2)  + 'px');
+      sfCells .forEach(el => el.style.height =  exactH      + 'px');
+    }
     drawLines();
-    relayout();
+    // Apply responsive scaling AFTER layout is fully settled
+    setTimeout(scaleBracket, 50);
   }));
 }
 
@@ -703,16 +717,6 @@ function drawLines(){
       seg(sx, rs.midY, sx, rf.midY);          // vertical to box midY
       seg(sx, rf.midY, rf.right+1, rf.midY);  // enter box right side
     }
-  }
-  // Connect champion DOWN to the two final boxes (clean bracket elbow)
-  var fboxA=document.getElementById('finalBoxA'), fboxB=document.getElementById('finalBoxB'), champ=document.querySelector('.champ-card');
-  if(fboxA&&fboxB&&champ){
-    var ra=toPage(fboxA), rb=toPage(fboxB), rc=toPage(champ);
-    var joinY=(rc.bottom+Math.min(ra.top,rb.top))/2; // midpoint between champ bottom and boxes top
-    seg(rc.midX, rc.bottom, rc.midX, joinY);  // down from champion center
-    seg(ra.midX, joinY, rb.midX, joinY);      // horizontal bar spanning both boxes
-    seg(ra.midX, joinY, ra.midX, ra.top);     // down into box A top
-    seg(rb.midX, joinY, rb.midX, rb.top);     // down into box B top
   }
   svg.setAttribute('width',pageEl.scrollWidth); svg.setAttribute('height',pageEl.scrollHeight); svg.style.transformOrigin='top left';
 }
@@ -911,7 +915,6 @@ function scaleBracket(){
   var page = document.querySelector('.page');
   if(!page) return;
   var ao=document.getElementById('authOverlay'); if(ao&&ao.style.display!=='none') return;
-  // Reset transform to measure natural dimensions
   page.style.transform = '';
   page.style.transformOrigin = '';
   var vw = window.innerWidth;
@@ -921,12 +924,10 @@ function scaleBracket(){
     page.style.transform = 'scale(' + s + ')';
     page.style.transformOrigin = 'top left';
     document.body.style.height = (page.scrollHeight * s + 120) + 'px';
-    document.body.style.overflowX = 'hidden';
   } else {
     document.body.style.height = '';
   }
-  // Redraw connector lines AFTER scaling (wait a frame for layout to settle)
-  requestAnimationFrame(function(){ if(typeof drawLines === 'function') drawLines(); });
+  requestAnimationFrame(function(){ if(typeof drawLines==='function') drawLines(); });
 }
 
 // Master relayout: ensures correct order every time
@@ -936,18 +937,8 @@ function relayout(){
   _relayoutPending = true;
   requestAnimationFrame(function(){
     requestAnimationFrame(function(){
-      // 1. Reset scale to measure natural sizes
-      var pageEl = document.getElementById('page');
-      if(pageEl){ pageEl.style.transform=''; pageEl.style.transformOrigin=''; }
-      // 2. Recalc heights at natural size
-      recalcCellHeights();
-      // 3. Force reflow so new heights apply
-      if(pageEl) void pageEl.offsetHeight;
-      // 4. Apply scale + draw lines (next frame so heights settle)
-      requestAnimationFrame(function(){
-        scaleBracket();
-        _relayoutPending = false;
-      });
+      scaleBracket();
+      _relayoutPending = false;
     });
   });
 }
