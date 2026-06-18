@@ -312,6 +312,52 @@ const GROUPS_DATA = [
   {id:'L', teams:['England','Croatia','Ghana','Panama']},
 ];
 
+const R32_MATCHUPS = [
+  {id:'m74', a:'W-E', b:'T3-ABCDF'}, {id:'m77', a:'W-I', b:'T3-CDFGH'},
+  {id:'m73', a:'R-A', b:'R-B'},      {id:'m75', a:'W-F', b:'R-C'},
+  {id:'m83', a:'R-K', b:'R-L'},      {id:'m84', a:'W-H', b:'R-J'},
+  {id:'m81', a:'W-D', b:'T3-BEFIJ'}, {id:'m82', a:'W-G', b:'T3-AEHIJ'},
+  {id:'m76', a:'W-C', b:'R-F'},      {id:'m78', a:'R-E', b:'R-I'},
+  {id:'m79', a:'W-A', b:'T3-CEFHI'}, {id:'m80', a:'W-L', b:'T3-EHIJK'},
+  {id:'m86', a:'W-J', b:'R-H'},      {id:'m88', a:'R-D', b:'R-G'},
+  {id:'m85', a:'W-B', b:'T3-EFGIJ'}, {id:'m87', a:'W-K', b:'T3-DEIJL'},
+];
+
+// The 8 T3 slots in bracket order, each lists eligible groups
+const T3_SLOTS = ['ABCDF','CDFGH','BEFIJ','AEHIJ','CEFHI','EHIJK','EFGIJ','DEIJL'];
+
+// Assign advancing 3rd-place groups to T3 slots (greedy: each slot gets an eligible unused group)
+function assignThirdPlaces(advancingGroups){
+  // advancingGroups = array of 8 group letters whose 3rd-place team advances
+  const slots = T3_SLOTS.map(s => ({
+    combo: s,
+    eligible: s.split('').filter(g => advancingGroups.includes(g))
+  }));
+  // Most-constrained-first improves backtracking speed
+  slots.sort((a,b) => a.eligible.length - b.eligible.length);
+  const assign = {};
+  const used = {};
+  function backtrack(i){
+    if(i === slots.length) return true;
+    for(const g of slots[i].eligible){
+      if(!used[g]){
+        used[g] = true; assign[slots[i].combo] = g;
+        if(backtrack(i+1)) return true;
+        used[g] = false; delete assign[slots[i].combo];
+      }
+    }
+    return false;
+  }
+  return backtrack(0) ? assign : null;
+}
+
+function resolveR32Slot(slot, gr, thirdAssign){
+  if(slot.startsWith('W-')){ const g=slot.slice(2); return gr[g]?gr[g].pos1:null; }
+  if(slot.startsWith('R-')){ const g=slot.slice(2); return gr[g]?gr[g].pos2:null; }
+  if(slot.startsWith('T3-')){ const c=slot.slice(3); const g=thirdAssign?thirdAssign[c]:null; return (g&&gr[g])?gr[g].pos3:null; }
+  return null;
+}
+
 const KO_ROUNDS = [
   { key:'r32', label:'Round of 32', matches:[
     {id:'m74',label:'E1 vs 3rd(ABCDF)'},{id:'m77',label:'I1 vs 3rd(CDFGH)'},
@@ -539,24 +585,133 @@ async function saveGroupResult(gid) {
 }
 
 // ── Build KO results UI
-function buildKOResults() {
+async function buildKOResults() {
   const container = document.getElementById('resultsKnockout');
+  container.innerHTML = '<p style="color:#8a9a8a;padding:10px">Loading group results…</p>';
+
+  // 1. Load official group results
+  const { data: grData } = await sb.from('phase1_results').select('*');
+  const gr = {};
+  (grData||[]).forEach(r => { gr[r.group_id] = {pos1:r.pos1,pos2:r.pos2,pos3:r.pos3,pos4:r.pos4}; });
+
+  // Check all 12 groups have results
+  const missing = GROUPS_DATA.filter(g => !gr[g.id]).map(g => g.id);
+  if(missing.length > 0){
+    container.innerHTML = '<div style="padding:16px;background:#2a1a1a;border:1px solid #ff4444;border-radius:8px;color:#ff8888">' +
+      '⚠ Enter all group stage results first. Missing: ' + missing.join(', ') + '</div>';
+    return;
+  }
+
+  // 2. Load saved 3rd-place selection
+  const { data: setData } = await sb.from('settings').select('*').eq('key','third_place_groups').maybeSingle();
+  var advancing = [];
+  if(setData && setData.value){ try { advancing = JSON.parse(setData.value); } catch(e){} }
+
   container.innerHTML = '';
+
+  // 3. Third-place selection UI
+  const tpDiv = document.createElement('div');
+  tpDiv.style.cssText = 'margin-bottom:24px;padding:16px;background:#0d1a0d;border:1px solid #00FF00;border-radius:8px;';
+  tpDiv.innerHTML = '<p style="color:#00FF00;font-size:13px;margin-bottom:6px;font-weight:600">Step 1: Select the 8 best 3rd-place teams that advance</p>' +
+    '<p style="color:#8a9a8a;font-size:11px;margin-bottom:10px">FIFA: only 8 of 12 third-place teams advance to R32. Tick the 8 groups whose 3rd-place team qualifies.</p>' +
+    '<div id="thirdPlaceChecks" style="display:flex;flex-wrap:wrap;gap:8px"></div>' +
+    '<button onclick="saveThirdPlaces()" style="margin-top:12px;padding:8px 20px;background:#00FF00;color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:600">Save & Resolve R32</button>' +
+    '<span id="tpMsg" style="margin-left:12px;font-size:12px"></span>';
+  container.appendChild(tpDiv);
+
+  const checksDiv = tpDiv.querySelector('#thirdPlaceChecks');
+  GROUPS_DATA.forEach(g => {
+    const third = gr[g.id].pos3;
+    const lbl = document.createElement('label');
+    lbl.style.cssText = 'display:flex;align-items:center;gap:5px;background:#1a1a1a;padding:6px 10px;border-radius:5px;font-size:12px;cursor:pointer;color:#fff';
+    const checked = advancing.includes(g.id) ? 'checked' : '';
+    lbl.innerHTML = '<input type="checkbox" class="tp-check" value="'+g.id+'" '+checked+'> '+g.id+': '+third;
+    checksDiv.appendChild(lbl);
+  });
+
+  // 4. If we have a valid 8-group selection, resolve and show R32 + later rounds
+  if(advancing.length === 8){
+    const thirdAssign = assignThirdPlaces(advancing);
+    if(!thirdAssign){
+      const err = document.createElement('div');
+      err.style.cssText = 'padding:14px;margin-top:12px;background:#2a1a1a;border:1px solid #ff4444;border-radius:8px;color:#ff8888';
+      err.textContent = '⚠ This combination of 8 third-place groups cannot fill all bracket slots. Please adjust your selection.';
+      container.appendChild(err);
+      return;
+    }
+    window._r32Resolved = {};
+    R32_MATCHUPS.forEach(m => {
+      window._r32Resolved[m.id] = {
+        a: resolveR32Slot(m.a, gr, thirdAssign),
+        b: resolveR32Slot(m.b, gr, thirdAssign)
+      };
+    });
+
+    // Load existing KO results
+    const { data: koData } = await sb.from('phase2_results').select('*');
+    const koWinners = {};
+    (koData||[]).forEach(r => { koWinners[r.round+'_'+r.match_id] = r.winner; });
+
+    buildKORoundsUI(container, koWinners);
+  } else {
+    const note = document.createElement('p');
+    note.style.cssText = 'color:#8a9a8a;padding:10px;font-size:12px';
+    note.textContent = 'Select exactly 8 groups above, then Save & Resolve to enter knockout results.';
+    container.appendChild(note);
+  }
+}
+
+async function saveThirdPlaces(){
+  const checked = [...document.querySelectorAll('.tp-check:checked')].map(c => c.value);
+  const msg = document.getElementById('tpMsg');
+  if(checked.length !== 8){
+    msg.textContent = '⚠ Select exactly 8 (you have '+checked.length+')';
+    msg.style.color = '#ff4444';
+    return;
+  }
+  await sb.from('settings').upsert({key:'third_place_groups', value: JSON.stringify(checked)}, {onConflict:'key'});
+  msg.textContent = '✓ Saved';
+  msg.style.color = '#00FF00';
+  buildKOResults();
+}
+
+function buildKORoundsUI(container, koWinners){
+  const resolved = window._r32Resolved;
+  // Track winners to populate later rounds
+  const W = {}; // W[matchId] = winner team name
+  Object.keys(koWinners).forEach(k => { const mid = k.split('_').slice(1).join('_'); W[mid] = koWinners[k]; });
+
   KO_ROUNDS.forEach(rnd => {
     const section = document.createElement('div');
     section.style.marginBottom = '20px';
-    section.innerHTML = `<p style="color:#8a9a8a;font-size:11px;letter-spacing:1px;margin-bottom:10px;text-transform:uppercase">${rnd.label}</p>`;
+    section.innerHTML = '<p style="color:#8a9a8a;font-size:11px;letter-spacing:1px;margin-bottom:10px;text-transform:uppercase">'+rnd.label+'</p>';
     const grid = document.createElement('div');
     grid.className = 'results-grid';
+
     rnd.matches.forEach(match => {
+      // Determine the two teams for this match
+      let teamA = null, teamB = null;
+      if(rnd.key === 'r32'){
+        teamA = resolved[match.id] ? resolved[match.id].a : null;
+        teamB = resolved[match.id] ? resolved[match.id].b : null;
+      } else {
+        // Derived from previous round winners (parse "W(mXX) vs W(mYY)")
+        const m = match.label.match(/W\((\w+)\)\s*vs\s*W\((\w+)\)/i);
+        if(m){ teamA = W[m[1].toLowerCase()] || W[m[1]] || null; teamB = W[m[2].toLowerCase()] || W[m[2]] || null; }
+      }
+
+      const saved = koWinners[rnd.key+'_'+match.id] || '';
       const div = document.createElement('div');
       div.className = 'ko-match';
-      div.innerHTML = `
-        <label>${match.label}</label>
-        <input id="ko_${rnd.key}_${match.id}" class="auth-input" style="margin-bottom:8px"
-               placeholder="Winner team name" type="text">
-        <button class="result-save" onclick="saveKOResult('${rnd.key}','${match.id}')">Save Winner</button>
-        <div class="result-saved" id="koSaved_${rnd.key}_${match.id}"></div>`;
+      const aLabel = teamA || '(TBD)';
+      const bLabel = teamB || '(TBD)';
+      let opts = '<option value="">— Select winner —</option>';
+      if(teamA) opts += '<option value="'+teamA+'" '+(saved===teamA?'selected':'')+'>'+teamA+'</option>';
+      if(teamB) opts += '<option value="'+teamB+'" '+(saved===teamB?'selected':'')+'>'+teamB+'</option>';
+      div.innerHTML = '<label>'+aLabel+' vs '+bLabel+'</label>' +
+        '<select id="ko_'+rnd.key+'_'+match.id+'" class="auth-input" style="margin-bottom:8px" '+(!teamA||!teamB?'disabled':'')+'>'+opts+'</select>' +
+        '<button class="result-save" onclick="saveKOResult(\''+rnd.key+'\',\''+match.id+'\')" '+(!teamA||!teamB?'disabled':'')+'>Save Winner</button>' +
+        '<div class="result-saved" id="koSaved_'+rnd.key+'_'+match.id+'"></div>';
       grid.appendChild(div);
     });
     section.appendChild(grid);
@@ -575,18 +730,20 @@ async function loadKOResultValues() {
 
 // ── Save KO result
 async function saveKOResult(round, matchId) {
-  const winner = document.getElementById(`ko_${round}_${matchId}`).value.trim();
+  const sel = document.getElementById(`ko_${round}_${matchId}`);
+  const winner = sel.value.trim();
   const msgEl  = document.getElementById(`koSaved_${round}_${matchId}`);
-  if (!winner) { msgEl.textContent='⚠ Enter winner name'; msgEl.style.color='#ff4444'; return; }
+  if (!winner) { msgEl.textContent='⚠ Select winner'; msgEl.style.color='#ff4444'; return; }
 
   const { error } = await sb.from('phase2_results').upsert(
     { round, match_id: matchId, winner, entered_at: new Date().toISOString() },
     { onConflict:'round,match_id' }
   );
-  if (error) { msgEl.textContent='⚠ Error: '+error.message; msgEl.style.color='#ff4444'; }
-  else { msgEl.textContent='✓ Saved & scored!'; msgEl.style.color='#00FF00'; }
-  setTimeout(() => msgEl.textContent='', 3000);
+  if (error) { msgEl.textContent='⚠ Error: '+error.message; msgEl.style.color='#ff4444'; return; }
+  msgEl.textContent='✓ Saved & scored!'; msgEl.style.color='#00FF00';
   await loadLeaderboard();
+  // Rebuild to populate next round's dropdowns with this winner
+  setTimeout(() => buildKOResults(), 600);
 }
 
 // ── Results tabs
@@ -594,7 +751,8 @@ function showResultsTab(tab) {
   document.querySelectorAll('.rtab').forEach(b => b.classList.remove('active'));
   document.getElementById('resultsGroups').style.display   = tab==='groups'   ? 'grid' : 'none';
   document.getElementById('resultsKnockout').style.display = tab==='knockout' ? 'block': 'none';
-  event.target.classList.add('active');
+  if(event && event.target) event.target.classList.add('active');
+  if(tab==='knockout') buildKOResults();
 }
 
 // ── Leaderboard
