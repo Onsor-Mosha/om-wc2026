@@ -35,7 +35,7 @@
   body { background:var(--bg); color:var(--text); font-family:'OM',sans-serif; font-weight:300; font-size:13px; overflow-x:hidden; overflow-y:auto; -webkit-overflow-scrolling:touch; margin:0; padding:0; max-width:100vw; }
 
   html { overflow-x:hidden; width:100%; }
-  header { background:linear-gradient(135deg,#000000,#0a120a,#000000); border-bottom:2px solid var(--gold); padding:12px 20px; display:flex; align-items:center; justify-content:space-between; position:fixed; top:0; left:0; width:100vw; z-index:200; box-sizing:border-box; overflow:hidden; }
+  header { background:linear-gradient(135deg,#000000,#0a120a,#000000); border-bottom:2px solid var(--gold); padding:8px 16px; display:flex; align-items:center; justify-content:space-between; z-index:200; box-sizing:border-box; }
   header h1 { font-family:'OM',sans-serif; font-weight:500; font-size:24px; letter-spacing:2px; color:#000; margin:0; }
   header .sub { color:var(--muted); font-size:10px; margin-top:1px; letter-spacing:1px; }
   .reset-btn { background:transparent; border:1px solid var(--border); color:var(--muted); padding:5px 12px; border-radius:5px; cursor:pointer; font-size:11px; }
@@ -286,7 +286,7 @@ window.addEventListener('DOMContentLoaded', function() {
   </div>
   <button class="reset-btn" onclick="resetAll()">↺ Reset All</button>
 </header>
-<div class="instructions" style="margin-top:90px;">
+<div class="instructions">
   <span>Click a team</span> in any group to set 1st → 2nd → 3rd → clear. &nbsp;|&nbsp;
   <span>Click a team</span> in the bracket to advance them toward the Final.
 </div>
@@ -1056,7 +1056,7 @@ function doLayout(){
     var s = vw / pw;
     page.style.transform = 'scale('+s+')';
     page.style.transformOrigin = 'top left';
-    document.body.style.height = (page.scrollHeight * s + 120) + 'px';
+    document.body.style.height = (page.scrollHeight * s + 20) + 'px';
   } else {
     document.body.style.height = '';
   }
