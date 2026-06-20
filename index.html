@@ -753,7 +753,7 @@ function drawLines(){
 
 // ═══════════ INTERACTIONS ═══════════
 function cycleTeam(gid,ti){
-  if(_submitted){return;}
+  if(_submitted){flashLock('Your predictions are locked. You cannot change your answers after submitting.');return;}
   const s=sel[gid], cur=s[ti];
   const c={'1st':0,'2nd':0,'3rd':0,'4th':0};
   Object.values(s).forEach(v=>{if(v)c[v]++;});
