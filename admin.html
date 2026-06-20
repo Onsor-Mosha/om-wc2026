@@ -441,7 +441,7 @@ window.adminLogin = async function adminLogin() {
   if (error) { errEl.textContent = '⚠ ' + error.message; return; }
   adminUser = data.user;
   // Check admin email
-  if(email.toLowerCase() !== 'wc_omadmin@om.sa'){
+  if(email.toLowerCase() !== 'hussein@om.sa'){
     document.getElementById('adminErr').textContent = '⚠ Access denied. Only the admin account can access this panel.';
     await sb.auth.signOut();
     return;
@@ -464,7 +464,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     adminUser = session.user;
-    if(session.user.email.toLowerCase() !== 'wc_omadmin@om.sa'){
+    if(session.user.email.toLowerCase() !== 'hussein@om.sa'){
       await sb.auth.signOut();
       document.getElementById('adminErr').textContent = '⚠ Access denied. Admin account only.';
     } else {
