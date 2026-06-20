@@ -948,7 +948,7 @@ function savePreds(){if(!_user)return;var b=$('bSv');
     return;
   }
   if(!confirm('Are you sure you want to submit? Once submitted, your predictions are final and cannot be changed.')){return;}
-  b.textContent='Saving...';b.disabled=true;var rows=GROUPS.map(function(g){var s=sel[g.id];function ft(rank){var i=Object.keys(s).find(function(i){return s[i]===rank});return i!==undefined?g.teams[parseInt(i)].name:null};return{user_id:_user.id,group_id:g.id,pos1:ft('1st'),pos2:ft('2nd'),pos3:ft('3rd'),pos4:ft('4th'),submitted_at:new Date().toISOString()}});_sb.from('phase1_predictions').upsert(rows,{onConflict:'user_id,group_id'}).then(function(r){if(r.error){b.textContent='Error';b.style.background='#ff4444';b.disabled=false;return};b.textContent='✓ Submitted';b.style.background='#333';loadPts();lockAfterSubmit()})}
+  b.textContent='Saving...';b.disabled=true;var rows=GROUPS.map(function(g){var s=sel[g.id];function ft(rank){var i=Object.keys(s).find(function(i){return s[i]===rank});return i!==undefined?g.teams[parseInt(i)].name:null};return{user_id:_user.id,group_id:g.id,pos1:ft('1st'),pos2:ft('2nd'),pos3:ft('3rd'),pos4:ft('4th'),submitted_at:new Date().toISOString()}});_sb.from('phase1_predictions').upsert(rows,{onConflict:'user_id,group_id'}).then(function(r){if(r.error){b.textContent='Error: '+r.error.message;b.style.background='#ff4444';b.disabled=false;console.error('Save error:',r.error);return};b.textContent='✓ Submitted';b.style.background='#333';loadPts();lockAfterSubmit()})}
 
 // Save knockout predictions (Phase 2)
 function saveKnockoutPreds(b){
