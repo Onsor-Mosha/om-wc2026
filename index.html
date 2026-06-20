@@ -645,34 +645,9 @@ function buildBracket(){
       fcEl.style.width = (mw * 2 + gap + 16) + 'px';
       fcEl.style.minWidth = (mw * 2 + gap + 16) + 'px';
     }
-
-    sizeCellsAndDraw();
   }));
-}
-
-function sizeCellsAndDraw(attempt){
-  attempt = attempt || 0;
-  const cards = [...document.querySelectorAll('#leftGroups .group-card')];
-  if(cards.length >= 2){
-    const top    = cards[0].getBoundingClientRect().top;
-    const bottom = cards[cards.length-1].getBoundingClientRect().bottom;
-    const exactH = bottom - top;
-    // Guard: if cards not rendered yet (height too small), retry
-    if(exactH < 300 && attempt < 10){
-      setTimeout(function(){ sizeCellsAndDraw(attempt+1); }, 100);
-      return;
-    }
-    const r32Cells = [...document.querySelectorAll('#bracketLeft .rcol:nth-child(1) .match-cell, #bracketRight .rcol:nth-child(1) .match-cell')];
-    const r16Cells = [...document.querySelectorAll('#bracketLeft .rcol:nth-child(2) .match-cell, #bracketRight .rcol:nth-child(2) .match-cell')];
-    const qfCells  = [...document.querySelectorAll('#bracketLeft .rcol:nth-child(3) .match-cell, #bracketRight .rcol:nth-child(3) .match-cell')];
-    const sfCells  = [...document.querySelectorAll('#bracketLeft .rcol:nth-child(4) .match-cell, #bracketRight .rcol:nth-child(4) .match-cell')];
-    r32Cells.forEach(el => el.style.height = (exactH/8)  + 'px');
-    r16Cells.forEach(el => el.style.height = (exactH/4)  + 'px');
-    qfCells .forEach(el => el.style.height = (exactH/2)  + 'px');
-    sfCells .forEach(el => el.style.height =  exactH      + 'px');
-  }
-  drawLines();
-  setTimeout(scaleBracket, 50);
+  // Trigger the clean layout system after build
+  if(typeof requestLayout === 'function') requestLayout();
 }
 
 // ═══════════ UPDATE BRACKET SLOTS (no rebuild) ═══════════
@@ -1018,97 +993,81 @@ try{_sb=window.supabase.createClient('https://dazizawmjnmgmosefzxs.supabase.co',
 
 // ══════════ RESPONSIVE SCALING ══════════
 
-function recalcCellHeights(){
-  var cards = document.querySelectorAll('#leftGroups .group-card');
-  if(cards.length < 2) return;
-  // Account for any current scale so heights are in unscaled units
-  var pageEl = document.getElementById('page');
-  var scale = 1;
-  if(pageEl){
-    var cs = window.getComputedStyle(pageEl).transform;
-    if(cs && cs !== 'none'){ var m = cs.match(/matrix\(([^,]+)/); if(m) scale = parseFloat(m[1]) || 1; }
-  }
-  var top = cards[0].getBoundingClientRect().top;
-  var bottom = cards[cards.length-1].getBoundingClientRect().bottom;
-  var exactH = (bottom - top) / scale;
-  // Guard: skip if layout not ready (cards not rendered)
-  if(exactH < 100) return;
-  
-  var r32 = document.querySelectorAll('#bracketLeft .rcol:nth-child(1) .match-cell, #bracketRight .rcol:nth-child(1) .match-cell');
-  var r16 = document.querySelectorAll('#bracketLeft .rcol:nth-child(2) .match-cell, #bracketRight .rcol:nth-child(2) .match-cell');
-  var qf  = document.querySelectorAll('#bracketLeft .rcol:nth-child(3) .match-cell, #bracketRight .rcol:nth-child(3) .match-cell');
-  var sf  = document.querySelectorAll('#bracketLeft .rcol:nth-child(4) .match-cell, #bracketRight .rcol:nth-child(4) .match-cell');
-  
-  for(var i=0;i<r32.length;i++) r32[i].style.height = (exactH/8)+'px';
-  for(var i=0;i<r16.length;i++) r16[i].style.height = (exactH/4)+'px';
-  for(var i=0;i<qf.length;i++)  qf[i].style.height  = (exactH/2)+'px';
-  for(var i=0;i<sf.length;i++)  sf[i].style.height   = exactH+'px';
-}
-
-function scaleBracket(){
-  var page = document.querySelector('.page');
+// Master relayout: ensures correct order every time
+var _relayoutPending = false;
+// ═══════════ CLEAN LAYOUT SYSTEM ═══════════
+// Single deterministic layout function - the ONLY thing that touches sizing/scaling
+function doLayout(){
+  var page = document.getElementById('page');
   if(!page) return;
-  var ao=document.getElementById('authOverlay'); if(ao&&ao.style.display!=='none') return;
+  var ao = document.getElementById('authOverlay');
+  if(ao && ao.style.display !== 'none') return; // skip while login showing
+
+  // 1. Reset any transform to measure natural size
   page.style.transform = '';
   page.style.transformOrigin = '';
+
+  // 2. Size the bracket cells based on group card span
+  var cards = document.querySelectorAll('#leftGroups .group-card');
+  if(cards.length >= 2){
+    var exactH = cards[cards.length-1].getBoundingClientRect().bottom - cards[0].getBoundingClientRect().top;
+    if(exactH >= 300){ // only if cards are actually rendered
+      var sel = function(n){ return document.querySelectorAll('#bracketLeft .rcol:nth-child('+n+') .match-cell, #bracketRight .rcol:nth-child('+n+') .match-cell'); };
+      sel(1).forEach(function(el){ el.style.height = (exactH/8)+'px'; });
+      sel(2).forEach(function(el){ el.style.height = (exactH/4)+'px'; });
+      sel(3).forEach(function(el){ el.style.height = (exactH/2)+'px'; });
+      sel(4).forEach(function(el){ el.style.height = exactH+'px'; });
+    }
+  }
+
+  // 3. Apply responsive scale if needed (measure AFTER cell sizing)
   var vw = window.innerWidth;
   var pw = page.scrollWidth;
   if(pw > vw){
     var s = vw / pw;
-    page.style.transform = 'scale(' + s + ')';
+    page.style.transform = 'scale('+s+')';
     page.style.transformOrigin = 'top left';
     document.body.style.height = (page.scrollHeight * s + 120) + 'px';
   } else {
     document.body.style.height = '';
   }
-  requestAnimationFrame(function(){ if(typeof drawLines==='function') drawLines(); });
+
+  // 4. Draw connectors last (positions now final)
+  drawLines();
 }
 
-// Master relayout: ensures correct order every time
-var _relayoutPending = false;
-function relayout(){
-  if(_relayoutPending) return;
-  _relayoutPending = true;
-  requestAnimationFrame(function(){
-    requestAnimationFrame(function(){
-      // Reset scale before re-measuring cells
-      var pageEl = document.getElementById('page');
-      if(pageEl){ pageEl.style.transform=''; pageEl.style.transformOrigin=''; }
-      if(typeof sizeCellsAndDraw === 'function'){ sizeCellsAndDraw(0); }
-      else { scaleBracket(); }
-      _relayoutPending = false;
-    });
+// Debounced layout trigger
+var _layoutRAF = null;
+function requestLayout(){
+  if(_layoutRAF) cancelAnimationFrame(_layoutRAF);
+  _layoutRAF = requestAnimationFrame(function(){
+    requestAnimationFrame(doLayout);
   });
 }
 
-window.addEventListener('resize', function(){ relayout(); });
-window.addEventListener('orientationchange', function(){ setTimeout(relayout, 300); });
-setTimeout(scaleBracket, 300);
-setTimeout(relayout, 600);
-setTimeout(relayout, 1200);
-setTimeout(relayout, 2000);
-window.addEventListener('load', function(){ setTimeout(relayout, 100); });
-// Interval redraw: re-run layout every 400ms for first 6 seconds to defeat all timing races
-var _layoutTicks = 0;
-var _layoutInterval = setInterval(function(){
-  _layoutTicks++;
-  if(typeof relayout === 'function') relayout();
-  if(_layoutTicks >= 15){ clearInterval(_layoutInterval); }
-}, 400);
-// ResizeObserver: redraw connectors whenever bracket layout changes (catches all timing races)
+// Make relayout an alias (used elsewhere in code)
+function relayout(){ requestLayout(); }
+function scaleBracket(){ requestLayout(); }
+
+// Triggers (all debounced through requestLayout)
+window.addEventListener('resize', requestLayout);
+window.addEventListener('orientationchange', function(){ setTimeout(requestLayout, 300); });
+window.addEventListener('load', requestLayout);
+if(document.fonts && document.fonts.ready){ document.fonts.ready.then(requestLayout); }
+
+// ResizeObserver: the key fix - redraw whenever group cards finish sizing
 if(typeof ResizeObserver !== 'undefined'){
-  var _ro = new ResizeObserver(function(){ if(typeof drawLines==='function') requestAnimationFrame(drawLines); });
+  var _ro = new ResizeObserver(requestLayout);
   setTimeout(function(){
-    var pg = document.getElementById('page');
     var lg = document.getElementById('leftGroups');
-    if(pg) _ro.observe(pg);
     if(lg) _ro.observe(lg);
-  }, 1000);
+  }, 300);
 }
-// Also redraw when fonts finish loading (font metrics affect layout)
-if(document.fonts && document.fonts.ready){
-  document.fonts.ready.then(function(){ setTimeout(relayout, 100); });
-}
+
+// A few delayed triggers to catch initial render (debounced, so harmless)
+setTimeout(requestLayout, 200);
+setTimeout(requestLayout, 800);
+setTimeout(requestLayout, 1600);
 
 
 // ══════════ LANDSCAPE HINT MANAGER ══════════
