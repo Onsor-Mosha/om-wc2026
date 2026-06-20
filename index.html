@@ -46,7 +46,7 @@
   .page { display:flex; align-items:flex-start; padding:16px 8px; gap:0; min-width:1560px; position:relative; }
 
   /* ── GROUPS ── */
-  .groups-panel { display:flex; flex-direction:column; gap:8px; width:150px; flex-shrink:0; padding:0 5px; }
+  .groups-panel { display:flex; flex-direction:column; gap:8px; width:165px; flex-shrink:0; padding:0 5px; }
   .group-card { background:var(--card); border:1px solid var(--border); border-radius:7px; overflow:hidden; }
   .group-header { background:linear-gradient(90deg,#0a1a0a,#111811); padding:4px 9px; font-family:'OM',sans-serif; font-weight:500; font-size:13px; letter-spacing:1px; color:var(--gold); border-bottom:1px solid var(--border); }
   .team-row { display:flex; align-items:center; padding:3px 7px; border-bottom:1px solid rgba(42,58,82,.35); cursor:pointer; gap:5px; border-left:3px solid transparent; }
@@ -816,7 +816,7 @@ function pickWinner(round,mi,si){
 
 function resetAll(){
   if(_phase>=2){
-    // Phase 2: only reset knockout predictions, keep group stage intact
+    if(_submitted){alert('Your knockout predictions are locked. Contact admin to reset.');return;}
     if(!confirm('Reset your knockout predictions? Group stage answers will be kept.')) return;
     clearKO(0);
     updateBracket();
@@ -948,9 +948,21 @@ function savePreds(){if(!_user)return;var b=$('bSv');
 
 // Save knockout predictions (Phase 2)
 function saveKnockoutPreds(b){
-  // Validate: champion must be picked (full bracket complete)
-  if(!ko.champion){
-    alert('Please complete your knockout predictions all the way to the World Champion before submitting.');
+  // Validate: check each round is complete
+  var missing = [];
+  var r32Count = ko.r32.filter(function(t){ return t !== null; }).length;
+  var r16Count = ko.r16.filter(function(t){ return t !== null; }).length;
+  var qfCount  = ko.qf.filter(function(t){ return t !== null; }).length;
+  var sfCount  = ko.sf.filter(function(t){ return t !== null; }).length;
+
+  if(r32Count < 16) missing.push('Round of 32 (' + r32Count + '/16 picked)');
+  if(r16Count < 8)  missing.push('Round of 16 (' + r16Count + '/8 picked)');
+  if(qfCount < 4)   missing.push('Quarter-Finals (' + qfCount + '/4 picked)');
+  if(sfCount < 2)   missing.push('Semi-Finals (' + sfCount + '/2 picked)');
+  if(!ko.final)     missing.push('Final (champion not selected)');
+
+  if(missing.length > 0){
+    alert('Please complete all knockout predictions before submitting:\n\n' + missing.join('\n'));
     return;
   }
   b.textContent='Saving...'; b.disabled=true;
@@ -975,6 +987,7 @@ function saveKnockoutPreds(b){
 function lockKnockout(){
   _p2lock=true; _submitted=true;
   var b=$('bSv'); if(b){ b.textContent='✓ Submitted'; b.style.background='#333'; b.disabled=true; b.style.cursor='default'; b.style.boxShadow='none'; }
+  var rb=document.querySelector('.reset-btn'); if(rb) rb.style.display='none';
   var inst=document.querySelector('.instructions');
   if(inst) inst.innerHTML='<span style="color:#00FF00;">✓ Your knockout predictions have been submitted and locked.</span>';
 }
