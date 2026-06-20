@@ -815,13 +815,22 @@ function pickWinner(round,mi,si){
 }
 
 function resetAll(){
+  if(_phase>=2){
+    // Phase 2: only reset knockout predictions, keep group stage intact
+    if(!confirm('Reset your knockout predictions? Group stage answers will be kept.')) return;
+    clearKO(0);
+    updateBracket();
+    if(_user&&_sb){
+      _sb.from('phase2_predictions').delete().eq('user_id',_user.id).then(function(){});
+    }
+    return;
+  }
   if(_submitted){alert('Your predictions are locked. Contact admin to reset.');return;}
   if(!confirm('Are you sure you want to reset all predictions? This will clear your saved answers.')) return;
   GROUPS.forEach(g=>g.teams.forEach((_,i)=>sel[g.id][i]=null));
   clearKO(0);
   updateGroups();
   updateBracket();
-  // Also delete from database
   if(_user&&_sb){
     _sb.from('phase1_predictions').delete().eq('user_id',_user.id).then(function(){});
     _sb.from('phase2_predictions').delete().eq('user_id',_user.id).then(function(){});
