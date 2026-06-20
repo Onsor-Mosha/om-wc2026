@@ -44,6 +44,7 @@
   .instructions span { color:#00FF00; }
 
   .page { display:flex; align-items:flex-start; padding:16px 8px; gap:0; min-width:1560px; position:relative; }
+  .page-wrapper { overflow:hidden; }
 
   /* ── GROUPS ── */
   .groups-panel { display:flex; flex-direction:column; gap:8px; width:165px; flex-shrink:0; padding:0 5px; }
@@ -293,7 +294,7 @@ window.addEventListener('DOMContentLoaded', function() {
 
 <div id="vpWrapper">
 <div id="vpInner">
-<div class="page" id="page">
+<div class="page-wrapper"><div class="page" id="page">
   <svg id="connectors"></svg>
   <div class="groups-panel" id="leftGroups"></div>
   <div class="bracket-half left"  id="bracketLeft"></div>
@@ -302,6 +303,7 @@ window.addEventListener('DOMContentLoaded', function() {
   <div class="groups-panel" id="rightGroups"></div>
   <button class="sv" id="bSv" style="display:none" onclick="savePreds()">Submit Predictions</button>
 </div>
+</div><!-- page-wrapper -->
 <div class="scroll-hint">← Scroll horizontally if needed →</div>
 </div><!-- /vpInner -->
 </div><!-- /vpWrapper -->
@@ -1056,9 +1058,11 @@ function doLayout(){
     var s = vw / pw;
     page.style.transform = 'scale('+s+')';
     page.style.transformOrigin = 'top left';
-    document.body.style.height = (page.scrollHeight * s + 20) + 'px';
+    var wrapper = page.parentElement;
+    if(wrapper) wrapper.style.height = (page.scrollHeight * s) + 'px';
   } else {
-    document.body.style.height = '';
+    var wrapper = page.parentElement;
+    if(wrapper) wrapper.style.height = '';
   }
 
   // 4. Force reflow so cell heights take effect
