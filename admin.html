@@ -336,7 +336,7 @@ const GROUPS_DATA = [
   {id:'D', teams:['United States','Paraguay','Australia','Türkiye']},
   {id:'E', teams:['Germany','Curaçao','Côte d\'Ivoire','Ecuador']},
   {id:'F', teams:['Netherlands','Japan','Sweden','Tunisia']},
-  {id:'G', teams:['Belgium','Egypt','IR Iran','New Zealand']},
+  {id:'G', teams:['Belgium','Egypt','Iran','New Zealand']},
   {id:'H', teams:['Spain','Cabo Verde','Saudi Arabia','Uruguay']},
   {id:'I', teams:['France','Senegal','Iraq','Norway']},
   {id:'J', teams:['Argentina','Algeria','Austria','Jordan']},
@@ -598,7 +598,7 @@ async function saveGroupResult(gid) {
   // All empty = clear this group's result
   if (filled.length === 0) {
     const { error } = await sb.from('phase1_results').delete().eq('group_id', gid);
-    if (error) { msgEl.textContent = '⚠ Error clearing'; msgEl.style.color = '#ff4444'; }
+    if (error) { msgEl.textContent = '⚠ Error: ' + error.message; msgEl.style.color = '#ff4444'; console.error('Clear error:', error); return; }
     else { msgEl.textContent = '✓ Group ' + gid + ' results cleared'; msgEl.style.color = '#00FF00'; }
     setTimeout(function(){ msgEl.textContent = ''; }, 3000);
     await loadLeaderboard();
@@ -624,7 +624,7 @@ async function saveGroupResult(gid) {
     { group_id:gid, pos1:pos1, pos2:pos2, pos3:pos3, pos4:pos4, entered_at: new Date().toISOString() },
     { onConflict:'group_id' }
   );
-  if (error) { msgEl.textContent='⚠ Error saving'; msgEl.style.color='#ff4444'; }
+  if (error) { msgEl.textContent='⚠ Error: ' + error.message; msgEl.style.color='#ff4444'; console.error('Save error:', error); return; }
   else { msgEl.textContent='✓ Saved & scored!'; msgEl.style.color='#00FF00'; }
   setTimeout(function(){ msgEl.textContent=''; }, 3000);
   await loadLeaderboard();
