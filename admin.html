@@ -201,11 +201,17 @@ window.addEventListener('DOMContentLoaded', function() {
       <div class="deadline-row">
         <div class="dl-group">
           <label>PHASE 1 DEADLINE (Group Stage)</label>
-          <input type="datetime-local" id="dl1">
+          <div style="display:flex;gap:8px;">
+            <input type="date" id="dl1date" style="flex:1;padding:8px;border-radius:6px;border:1px solid #333;background:#1a1a1a;color:#fff;font-size:13px;">
+            <input type="time" id="dl1time" value="23:59" style="width:100px;padding:8px;border-radius:6px;border:1px solid #333;background:#1a1a1a;color:#fff;font-size:13px;">
+          </div>
         </div>
         <div class="dl-group">
           <label>PHASE 2 DEADLINE (Knockout Stage)</label>
-          <input type="datetime-local" id="dl2">
+          <div style="display:flex;gap:8px;">
+            <input type="date" id="dl2date" style="flex:1;padding:8px;border-radius:6px;border:1px solid #333;background:#1a1a1a;color:#fff;font-size:13px;">
+            <input type="time" id="dl2time" value="23:59" style="width:100px;padding:8px;border-radius:6px;border:1px solid #333;background:#1a1a1a;color:#fff;font-size:13px;">
+          </div>
         </div>
         <button class="save-dl" onclick="saveDeadlines()">Save Deadlines</button>
       </div>
@@ -499,11 +505,13 @@ async function loadSettings() {
   // Set deadline inputs
   if (map['phase1_deadline']) {
     const d = new Date(map['phase1_deadline']);
-    document.getElementById('dl1').value = d.toISOString().slice(0,16);
+    document.getElementById('dl1date').value = d.toISOString().slice(0,10);
+    document.getElementById('dl1time').value = d.toISOString().slice(11,16);
   }
   if (map['phase2_deadline']) {
     const d = new Date(map['phase2_deadline']);
-    document.getElementById('dl2').value = d.toISOString().slice(0,16);
+    document.getElementById('dl2date').value = d.toISOString().slice(0,10);
+    document.getElementById('dl2time').value = d.toISOString().slice(11,16);
   }
 }
 
@@ -543,8 +551,12 @@ function updatePhaseButtons(phase) {
 
 // ── Save deadlines
 async function saveDeadlines() {
-  const dl1 = document.getElementById('dl1').value;
-  const dl2 = document.getElementById('dl2').value;
+  const d1 = document.getElementById('dl1date').value;
+  const t1 = document.getElementById('dl1time').value || '23:59';
+  const dl1 = d1 ? d1 + 'T' + t1 : '';
+  const d2 = document.getElementById('dl2date').value;
+  const t2 = document.getElementById('dl2time').value || '23:59';
+  const dl2 = d2 ? d2 + 'T' + t2 : '';
   const msg = document.getElementById('dlMsg');
 
   const upserts = [];
