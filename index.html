@@ -1032,8 +1032,11 @@ function doLayout(){
     document.body.style.height = '';
   }
 
-  // 4. Draw connectors last (positions now final)
-  drawLines();
+  // 4. Force reflow so cell heights take effect
+  void page.offsetHeight;
+
+  // 5. Draw connectors in next frame (positions now final)
+  requestAnimationFrame(function(){ drawLines(); });
 }
 
 // Debounced layout trigger
