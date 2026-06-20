@@ -131,7 +131,7 @@ window.addEventListener('DOMContentLoaded', function() {
   <div class="auth-box">
     <h2>⚙ ADMIN PANEL</h2>
     <p>OM WC2026 Prediction Competition</p>
-    <input class="auth-input" id="adminEmail" type="email" placeholder="admin@om.sa / @wahajgroup.sa">
+    <input class="auth-input" id="adminEmail" type="email" placeholder="wc_omadmin@om.sa">
     <input class="auth-input" id="adminPass"  type="password" placeholder="Password"
            onkeydown="if(event.key==='Enter')adminLogin()">
     <div class="auth-err" id="adminErr"></div>
@@ -440,6 +440,12 @@ window.adminLogin = async function adminLogin() {
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
   if (error) { errEl.textContent = '⚠ ' + error.message; return; }
   adminUser = data.user;
+  // Check admin email
+  if(email.toLowerCase() !== 'wc_omadmin@om.sa'){
+    document.getElementById('adminErr').textContent = '⚠ Access denied. Only the admin account can access this panel.';
+    await sb.auth.signOut();
+    return;
+  }
   document.getElementById('adminAuth').style.display = 'none';
   document.getElementById('adminApp').style.display  = 'block';
   document.getElementById('adminUserLabel').textContent = email;
@@ -458,10 +464,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     adminUser = session.user;
-    document.getElementById('adminAuth').style.display = 'none';
-    document.getElementById('adminApp').style.display  = 'block';
-    document.getElementById('adminUserLabel').textContent = session.user.email;
-    await loadAdminData();
+    if(session.user.email.toLowerCase() !== 'wc_omadmin@om.sa'){
+      await sb.auth.signOut();
+      document.getElementById('adminErr').textContent = '⚠ Access denied. Admin account only.';
+    } else {
+      document.getElementById('adminAuth').style.display = 'none';
+      document.getElementById('adminApp').style.display  = 'block';
+      document.getElementById('adminUserLabel').textContent = session.user.email;
+      await loadAdminData();
+    }
   }
 });
 
