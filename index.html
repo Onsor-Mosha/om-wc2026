@@ -646,25 +646,33 @@ function buildBracket(){
       fcEl.style.minWidth = (mw * 2 + gap + 16) + 'px';
     }
 
-    // Step 2: measure exact span from first → last group card
-    const cards = [...document.querySelectorAll('#leftGroups .group-card')];
-    if(cards.length >= 2){
-      const top    = cards[0].getBoundingClientRect().top;
-      const bottom = cards[cards.length-1].getBoundingClientRect().bottom;
-      const exactH = bottom - top;
-      const r32Cells = [...document.querySelectorAll('#bracketLeft .rcol:nth-child(1) .match-cell, #bracketRight .rcol:nth-child(1) .match-cell')];
-      const r16Cells = [...document.querySelectorAll('#bracketLeft .rcol:nth-child(2) .match-cell, #bracketRight .rcol:nth-child(2) .match-cell')];
-      const qfCells  = [...document.querySelectorAll('#bracketLeft .rcol:nth-child(3) .match-cell, #bracketRight .rcol:nth-child(3) .match-cell')];
-      const sfCells  = [...document.querySelectorAll('#bracketLeft .rcol:nth-child(4) .match-cell, #bracketRight .rcol:nth-child(4) .match-cell')];
-      r32Cells.forEach(el => el.style.height = (exactH/8)  + 'px');
-      r16Cells.forEach(el => el.style.height = (exactH/4)  + 'px');
-      qfCells .forEach(el => el.style.height = (exactH/2)  + 'px');
-      sfCells .forEach(el => el.style.height =  exactH      + 'px');
-    }
-    drawLines();
-    // Apply responsive scaling AFTER layout is fully settled
-    setTimeout(scaleBracket, 50);
+    sizeCellsAndDraw();
   }));
+}
+
+function sizeCellsAndDraw(attempt){
+  attempt = attempt || 0;
+  const cards = [...document.querySelectorAll('#leftGroups .group-card')];
+  if(cards.length >= 2){
+    const top    = cards[0].getBoundingClientRect().top;
+    const bottom = cards[cards.length-1].getBoundingClientRect().bottom;
+    const exactH = bottom - top;
+    // Guard: if cards not rendered yet (height too small), retry
+    if(exactH < 300 && attempt < 10){
+      setTimeout(function(){ sizeCellsAndDraw(attempt+1); }, 100);
+      return;
+    }
+    const r32Cells = [...document.querySelectorAll('#bracketLeft .rcol:nth-child(1) .match-cell, #bracketRight .rcol:nth-child(1) .match-cell')];
+    const r16Cells = [...document.querySelectorAll('#bracketLeft .rcol:nth-child(2) .match-cell, #bracketRight .rcol:nth-child(2) .match-cell')];
+    const qfCells  = [...document.querySelectorAll('#bracketLeft .rcol:nth-child(3) .match-cell, #bracketRight .rcol:nth-child(3) .match-cell')];
+    const sfCells  = [...document.querySelectorAll('#bracketLeft .rcol:nth-child(4) .match-cell, #bracketRight .rcol:nth-child(4) .match-cell')];
+    r32Cells.forEach(el => el.style.height = (exactH/8)  + 'px');
+    r16Cells.forEach(el => el.style.height = (exactH/4)  + 'px');
+    qfCells .forEach(el => el.style.height = (exactH/2)  + 'px');
+    sfCells .forEach(el => el.style.height =  exactH      + 'px');
+  }
+  drawLines();
+  setTimeout(scaleBracket, 50);
 }
 
 // ═══════════ UPDATE BRACKET SLOTS (no rebuild) ═══════════
@@ -905,7 +913,7 @@ var _sb=null,_user=null,_tab='login',_phase=0,_p1lock=true,_p2lock=true,_lt=null
 function $(id){return document.getElementById(id)}
 function authTab(t){_tab=t;$('aName').style.display=t==='register'?'block':'none';$('aGo').textContent=t==='login'?'Sign In':'Create Account';$('aAlt').textContent=t==='login'?"Don't have an account? Register":"Already have an account? Sign In";$('aErr').textContent='';$('aOk').textContent=''}
 function authGo(){var em=$('aEmail').value.trim(),pw=$('aPass').value,nm=$('aName').value.trim();$('aErr').textContent='';$('aOk').textContent='';if(!em.toLowerCase().endsWith('@om.sa')){$('aErr').textContent='Only @om.sa emails allowed.';return};if(pw.length<6){$('aErr').textContent='Password: at least 6 characters.';return};if(!_sb){$('aErr').textContent='Still connecting... please wait.';return};var b=$('aGo'),o=b.textContent;b.textContent='Please wait...';b.disabled=true;if(_tab==='register'){if(!nm){$('aErr').textContent='Enter your full name.';b.textContent=o;b.disabled=false;return};_sb.auth.signUp({email:em,password:pw,options:{data:{full_name:nm}}}).then(function(r){b.textContent=o;b.disabled=false;if(r.error){$('aErr').textContent=r.error.message;return};$('aOk').textContent='Account created! Check email to verify, then sign in.';authTab('login')}).catch(function(e){b.textContent=o;b.disabled=false;$('aErr').textContent='Error: '+e.message})}else{_sb.auth.signInWithPassword({email:em,password:pw}).then(function(r){b.textContent=o;b.disabled=false;if(r.error){$('aErr').textContent=r.error.message;return};_user=r.data.user;onLogin()}).catch(function(e){b.textContent=o;b.disabled=false;$('aErr').textContent='Error: '+e.message})}}
-function onLogin(){$('authOverlay').style.display='none';document.body.classList.remove('auth-active');setTimeout(function(){checkLandscapeHint();relayout()},200);$('compBar').style.display='flex';_sb.from('profiles').select('full_name').eq('id',_user.id).single().then(function(r){$('cU').textContent=(r.data&&r.data.full_name)||_user.email.split('@')[0]});_sb.from('settings').select('key,value').then(function(r){var m={};(r.data||[]).forEach(function(x){m[x.key]=x.value});_phase=parseInt(m['phase']||'0');var now=new Date();_p1lock=_phase!==1||!!(m['phase1_deadline']&&now>new Date(m['phase1_deadline']));_p2lock=_phase!==2||!!(m['phase2_deadline']&&now>new Date(m['phase2_deadline']));var lbl={0:'⏳ Not started',1:'📋 Phase 1: Groups',2:'🏆 Phase 2: Knockouts',3:'🔒 Closed'};$('cPh').textContent=lbl[_phase]||'';if(_phase===2&&!_p2lock){var inst=document.querySelector('.instructions');if(inst)inst.innerHTML='<span style="color:#00FF00;">Phase 2: Pick the winner of each knockout match, all the way to the World Champion, then Submit.</span>';}$('bSv').style.display=((_phase===1&&!_p1lock)||(_phase===2&&!_p2lock))?'block':'none';doLock();loadPreds();loadPts();if(_phase>=2){loadOfficialResults(function(){updateBracket();loadKnockoutPreds();})}})}
+function onLogin(){$('authOverlay').style.display='none';document.body.classList.remove('auth-active');setTimeout(function(){checkLandscapeHint();relayout()},200);$('compBar').style.display='flex';_sb.from('profiles').select('full_name').eq('id',_user.id).single().then(function(r){$('cU').textContent=(r.data&&r.data.full_name)||_user.email.split('@')[0]});_sb.from('settings').select('key,value').then(function(r){var m={};(r.data||[]).forEach(function(x){m[x.key]=x.value});_phase=parseInt(m['phase']||'0');var now=new Date();_p1lock=_phase!==1||!!(m['phase1_deadline']&&now>new Date(m['phase1_deadline']));_p2lock=_phase!==2||!!(m['phase2_deadline']&&now>new Date(m['phase2_deadline']));var lbl={0:'⏳ Not started',1:'📋 Phase 1: Groups',2:'🏆 Phase 2: Knockouts',3:'🔒 Closed'};$('cPh').textContent=lbl[_phase]||'';if(_phase===2&&!_p2lock){var inst=document.querySelector('.instructions');if(inst)inst.innerHTML='<span style="color:#00FF00;">Phase 2: Pick the winner of each knockout match, all the way to the World Champion, then Submit.</span>';}$('bSv').style.display=((_phase===1&&!_p1lock)||(_phase===2&&!_p2lock))?'block':'none';doLock();if(_phase>=2){loadOfficialResults(function(){loadPreds();loadKnockoutPreds();loadPts();})}else{loadPreds();loadPts();}})}
 function doLock(){if(!window._origCT)window._origCT=window.cycleTeam;if(!window._origPW)window._origPW=window.pickWinner;window.cycleTeam=function(g,t){if(_phase!==1||_p1lock){flashLock('Group predictions are locked.');return};window._origCT(g,t)};window.pickWinner=function(r,m,s){if(_phase!==2){flashLock('Knockout predictions open in Phase 2.');return};if(_p2lock){flashLock('Phase 2 is locked.');return};window._origPW(r,m,s)}}
 function flashLock(msg){$('lMsg').textContent=msg;$('lMsg').style.display='block';clearTimeout(_lt);_lt=setTimeout(function(){$('lMsg').style.display='none'},2500)}
 function loadPreds(){if(_phase<1)return;_sb.from('phase1_predictions').select('*').eq('user_id',_user.id).then(function(r){if(!r.data||!r.data.length)return;var w=_p1lock;_p1lock=false;r.data.forEach(function(row){var g=GROUPS.find(function(g){return g.id===row.group_id});if(!g)return;['pos1','pos2','pos3','pos4'].forEach(function(p,i){if(!row[p])return;var ti=g.teams.findIndex(function(t){return t.name===row[p]});if(ti!==-1)sel[row.group_id][ti]=['1st','2nd','3rd','4th'][i]})});_p1lock=w;updateGroups();updateBracket();if(r.data.length>=12&&_phase<2){lockAfterSubmit()}
@@ -1076,6 +1084,20 @@ setTimeout(relayout, 600);
 setTimeout(relayout, 1200);
 setTimeout(relayout, 2000);
 window.addEventListener('load', function(){ setTimeout(relayout, 100); });
+// ResizeObserver: redraw connectors whenever bracket layout changes (catches all timing races)
+if(typeof ResizeObserver !== 'undefined'){
+  var _ro = new ResizeObserver(function(){ if(typeof drawLines==='function') requestAnimationFrame(drawLines); });
+  setTimeout(function(){
+    var pg = document.getElementById('page');
+    var lg = document.getElementById('leftGroups');
+    if(pg) _ro.observe(pg);
+    if(lg) _ro.observe(lg);
+  }, 1000);
+}
+// Also redraw when fonts finish loading (font metrics affect layout)
+if(document.fonts && document.fonts.ready){
+  document.fonts.ready.then(function(){ setTimeout(relayout, 100); });
+}
 
 
 // ══════════ LANDSCAPE HINT MANAGER ══════════
