@@ -217,12 +217,9 @@ window.addEventListener('DOMContentLoaded', function() {
       <h3>📋 Enter Official Results</h3>
       <p style="color:#8a9a8a;font-size:12px;margin-bottom:14px">Points are calculated automatically when you save results.</p>
       <div class="results-section">
-        <div class="results-tabs" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div class="results-tabs">
           <button class="rtab active" onclick="showResultsTab('groups')">Group Stage</button>
           <button class="rtab" onclick="showResultsTab('knockout')">Knockout Rounds</button>
-          <span style="flex:1"></span>
-          <button onclick="resetGroupResults()" style="padding:6px 14px;background:transparent;border:1px solid #ff4444;color:#ff4444;border-radius:6px;cursor:pointer;font-size:11px;">↺ Reset Group Results</button>
-          <button onclick="resetKnockoutResults()" style="padding:6px 14px;background:transparent;border:1px solid #ff4444;color:#ff4444;border-radius:6px;cursor:pointer;font-size:11px;">↺ Reset Knockout Results</button>
         </div>
         <div id="resultsGroups" class="results-grid"></div>
         <div id="resultsKnockout" style="display:none"></div>
@@ -596,14 +593,27 @@ async function saveGroupResult(gid) {
   const pos3 = document.getElementById('g'+gid+'p3').value;
   const pos4 = document.getElementById('g'+gid+'p4').value;
   const msgEl = document.getElementById('gSaved'+gid);
+  const filled = [pos1,pos2,pos3,pos4].filter(function(v){ return v !== ''; });
 
-  if (!pos1 || !pos2 || !pos3 || !pos4) {
-    msgEl.textContent = '⚠ Please select all 4 positions';
+  // All empty = clear this group's result
+  if (filled.length === 0) {
+    const { error } = await sb.from('phase1_results').delete().eq('group_id', gid);
+    if (error) { msgEl.textContent = '⚠ Error clearing'; msgEl.style.color = '#ff4444'; }
+    else { msgEl.textContent = '✓ Group ' + gid + ' results cleared'; msgEl.style.color = '#00FF00'; }
+    setTimeout(function(){ msgEl.textContent = ''; }, 3000);
+    await loadLeaderboard();
+    return;
+  }
+
+  // Partial = warn
+  if (filled.length < 4) {
+    msgEl.textContent = '⚠ Fill all 4 positions, or clear all to reset';
     msgEl.style.color = '#ff4444';
     return;
   }
-  var teams = [pos1, pos2, pos3, pos4];
-  var uniqueSet = new Set(teams);
+
+  // All filled - check duplicates
+  var uniqueSet = new Set([pos1,pos2,pos3,pos4]);
   if (uniqueSet.size !== 4) {
     msgEl.textContent = '⚠ Each team must appear only once';
     msgEl.style.color = '#ff4444';
