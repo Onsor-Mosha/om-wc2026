@@ -790,7 +790,16 @@ async function saveKOResult(round, matchId) {
   const sel = document.getElementById(`ko_${round}_${matchId}`);
   const winner = sel.value.trim();
   const msgEl  = document.getElementById(`koSaved_${round}_${matchId}`);
-  if (!winner) { msgEl.textContent='⚠ Select winner'; msgEl.style.color='#ff4444'; return; }
+
+  // Empty = clear this match result
+  if (!winner) {
+    const { error } = await sb.from('phase2_results').delete().eq('round', round).eq('match_id', matchId);
+    if (error) { msgEl.textContent='⚠ Error: '+error.message; msgEl.style.color='#ff4444'; return; }
+    msgEl.textContent='✓ Result cleared'; msgEl.style.color='#00FF00';
+    await loadLeaderboard();
+    setTimeout(() => buildKOResults(), 600);
+    return;
+  }
 
   const { error } = await sb.from('phase2_results').upsert(
     { round, match_id: matchId, winner, entered_at: new Date().toISOString() },
@@ -799,7 +808,6 @@ async function saveKOResult(round, matchId) {
   if (error) { msgEl.textContent='⚠ Error: '+error.message; msgEl.style.color='#ff4444'; return; }
   msgEl.textContent='✓ Saved & scored!'; msgEl.style.color='#00FF00';
   await loadLeaderboard();
-  // Rebuild to populate next round's dropdowns with this winner
   setTimeout(() => buildKOResults(), 600);
 }
 
@@ -1089,6 +1097,15 @@ async function resetKnockoutResults() {
   
   alert('✓ Knockout results have been reset.');
   await loadLeaderboard();
+}
+
+async function clearThirdPlaces(){
+  if(!confirm('Clear the 3rd-place selection? This will also clear all knockout results.')) return;
+  await sb.from('settings').delete().eq('key','third_place_groups');
+  await sb.from('phase2_results').delete().neq('round','');
+  document.getElementById('tpMsg').textContent = '✓ Selection cleared';
+  document.getElementById('tpMsg').style.color = '#00FF00';
+  buildKOResults();
 }
 </script>
 </body>
