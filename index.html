@@ -161,7 +161,7 @@
   .cbu{color:#00FF00;font-weight:500;}.cbph{color:#fff;background:rgba(0,255,0,.08);padding:2px 8px;border-radius:4px;font-size:11px;}.cbpt{color:#fefc4b;font-weight:500;}
   #compBar button{background:transparent;border:1px solid #2a3a2a;color:#8a9a8a;border-radius:4px;padding:4px 11px;font-size:11px;cursor:pointer;}
   #compBar button:hover{border-color:#00FF00;color:#00FF00;}
-  .sv { background:var(--green); color:var(--bg); border:none; padding:20px 70px; font-family:'OM',sans-serif; font-weight:500; font-size:22px; letter-spacing:2px; cursor:pointer; border-radius:8px; text-transform:uppercase; box-shadow:0 0 24px rgba(0,255,0,.4); }
+  .sv { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); background:var(--green); color:var(--bg); border:none; padding:14px 50px; font-family:'OM',sans-serif; font-weight:500; font-size:16px; letter-spacing:2px; cursor:pointer; border-radius:6px; text-transform:uppercase; box-shadow:0 0 20px rgba(0,255,0,.4); z-index:10; }
   #lbModal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:999998;display:none;align-items:center;justify-content:center;}
   #lbModal.show{display:flex;}
   .lbox{background:#0d110d;border:1px solid #00FF00;border-radius:12px;padding:28px;width:560px;max-width:92vw;max-height:80vh;display:flex;flex-direction:column;gap:12px;}
@@ -300,8 +300,8 @@ window.addEventListener('DOMContentLoaded', function() {
   <div class="final-center"       id="finalCenter"></div>
   <div class="bracket-half right" id="bracketRight"></div>
   <div class="groups-panel" id="rightGroups"></div>
+  <button class="sv" id="bSv" style="display:none" onclick="savePreds()">Submit Predictions</button>
 </div>
-<div style="width:100%;display:flex;justify-content:center;padding:20px 0 30px;"><button class="sv" id="bSv" style="display:none" onclick="savePreds()">Submit Predictions</button></div>
 <div class="scroll-hint">← Scroll horizontally if needed →</div>
 </div><!-- /vpInner -->
 </div><!-- /vpWrapper -->
