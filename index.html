@@ -138,15 +138,13 @@
   body.auth-active header { display:none !important; }
   body.auth-active .instructions { display:none !important; }
   body.auth-active #compBar { display:none !important; }
-  body.auth-active .sv { display:none !important; }
-  body.auth-active .landscape-hint { display:none !important; }
+  body.auth-active   body.auth-active .landscape-hint { display:none !important; }
   body.landscape-active { overflow:hidden !important; width:100vw !important; height:100vh !important; }
   body.landscape-active header { display:none !important; }
   body.landscape-active .page { display:none !important; }
   body.landscape-active .instructions { display:none !important; }
   body.landscape-active #compBar { display:none !important; }
-  body.landscape-active .sv { display:none !important; }
-  body.landscape-active #vpWrapper { display:none !important; }
+  body.landscape-active   body.landscape-active #vpWrapper { display:none !important; }
   .abox{background:#0d110d;border:2px solid #00FF00;border-radius:12px;padding:36px;width:420px;max-width:90vw;}
   .abox h2{color:#00FF00;font-size:20px;margin:0 0 4px;text-align:center;}
   .abox p{color:#8a9a8a;font-size:12px;margin:0 0 14px;text-align:center;}
@@ -163,7 +161,7 @@
   .cbu{color:#00FF00;font-weight:500;}.cbph{color:#fff;background:rgba(0,255,0,.08);padding:2px 8px;border-radius:4px;font-size:11px;}.cbpt{color:#fefc4b;font-weight:500;}
   #compBar button{background:transparent;border:1px solid #2a3a2a;color:#8a9a8a;border-radius:4px;padding:4px 11px;font-size:11px;cursor:pointer;}
   #compBar button:hover{border-color:#00FF00;color:#00FF00;}
-  .sv { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:999; background:var(--green); color:var(--bg); border:none; padding:18px 60px; font-family:'OM',sans-serif; font-weight:500; font-size:20px; letter-spacing:2px; cursor:pointer; border-radius:6px; text-transform:uppercase; box-shadow:0 0 20px rgba(0,255,0,.4); }
+  .sv { display:block; margin:30px auto; background:var(--green); color:var(--bg); border:none; padding:16px 50px; font-family:'OM',sans-serif; font-weight:500; font-size:18px; letter-spacing:2px; cursor:pointer; border-radius:6px; text-transform:uppercase; box-shadow:0 0 20px rgba(0,255,0,.4); }
   #lbModal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:999998;display:none;align-items:center;justify-content:center;}
   #lbModal.show{display:flex;}
   .lbox{background:#0d110d;border:1px solid #00FF00;border-radius:12px;padding:28px;width:560px;max-width:92vw;max-height:80vh;display:flex;flex-direction:column;gap:12px;}
@@ -753,7 +751,7 @@ function drawLines(){
 
 // ═══════════ INTERACTIONS ═══════════
 function cycleTeam(gid,ti){
-  if(_submitted){flashLock('Your predictions are locked. You cannot change your answers after submitting.');return;}
+  if(_submitted){flashLock('You already submitted your answers, wait for Phase 2 to predict the next round matches.');return;}
   const s=sel[gid], cur=s[ti];
   const c={'1st':0,'2nd':0,'3rd':0,'4th':0};
   Object.values(s).forEach(v=>{if(v)c[v]++;});
@@ -944,6 +942,7 @@ function savePreds(){if(!_user)return;var b=$('bSv');
     alert(msg);
     return;
   }
+  if(!confirm('Are you sure you want to submit? Once submitted, your predictions are final and cannot be changed.')){return;}
   b.textContent='Saving...';b.disabled=true;var rows=GROUPS.map(function(g){var s=sel[g.id];function ft(rank){var i=Object.keys(s).find(function(i){return s[i]===rank});return i!==undefined?g.teams[parseInt(i)].name:null};return{user_id:_user.id,group_id:g.id,pos1:ft('1st'),pos2:ft('2nd'),pos3:ft('3rd'),pos4:ft('4th'),submitted_at:new Date().toISOString()}});_sb.from('phase1_predictions').upsert(rows,{onConflict:'user_id,group_id'}).then(function(r){if(r.error){b.textContent='Error';b.style.background='#ff4444';b.disabled=false;return};b.textContent='✓ Submitted';b.style.background='#333';loadPts();lockAfterSubmit()})}
 
 // Save knockout predictions (Phase 2)
@@ -965,6 +964,7 @@ function saveKnockoutPreds(b){
     alert('Please complete all knockout predictions before submitting:\n\n' + missing.join('\n'));
     return;
   }
+  if(!confirm('Are you sure you want to submit? Once submitted, your knockout predictions are final and cannot be changed.')){return;}
   b.textContent='Saving...'; b.disabled=true;
   var rows=[];
   // R32 (16 matches)
