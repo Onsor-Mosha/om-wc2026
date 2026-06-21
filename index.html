@@ -858,9 +858,9 @@ window.addEventListener('resize',()=>relayout());
         <span style="font-family:'OM',sans-serif;font-weight:500;font-size:18px;letter-spacing:2px;color:#000;background:#00FF00;padding:4px 10px;display:inline-block;">Fifa WC 2026 Prediction Competition</span>
         <span style="font-family:'OM',sans-serif;font-weight:500;font-size:18px;letter-spacing:2px;color:#000;background:#00FF00;padding:4px 10px;display:inline-block;margin-left:20px;direction:rtl;">مسابقة توقعات كأس العالم 2026</span>
       </div>
-<p>Sign in with your @om.sa or @wahajgroup.sa company email</p>
+<p>Sign in with your company email</p>
 
-<input class="ainput" id="aEmail" type="email" placeholder="yourname@om.sa / @wahajgroup.sa">
+<input class="ainput" id="aEmail" type="email" placeholder="yourname@om.sa">
 <input class="ainput" id="aPass" type="password" placeholder="Password (min 6 chars)" onkeydown="if(event.key==='Enter')authGo()">
 <div class="aerr" id="aErr"></div>
 <div class="aok" id="aOk"></div>
@@ -881,7 +881,7 @@ window.addEventListener('resize',()=>relayout());
 var _sb=null,_user=null,_tab='login',_phase=0,_p1lock=true,_p2lock=true,_lt=null,_submitted=false;
 function $(id){return document.getElementById(id)}
 function authTab(t){_tab=t;$('aGo').textContent=t==='login'?'Sign In':'Create Account';$('aAlt').textContent=t==='login'?"Don't have an account? Register":"Already have an account? Sign In";$('aErr').textContent='';$('aOk').textContent=''}
-function authGo(){var em=$('aEmail').value.trim(),pw=$('aPass').value,nm='';$('aErr').textContent='';$('aOk').textContent='';if(!em.toLowerCase().endsWith('@om.sa')&&!em.toLowerCase().endsWith('@wahajgroup.sa')){$('aErr').textContent='Only @om.sa or @wahajgroup.sa emails allowed.';return};if(pw.length<6){$('aErr').textContent='Password: at least 6 characters.';return};if(!_sb){$('aErr').textContent='Still connecting... please wait.';return};var b=$('aGo'),o=b.textContent;b.textContent='Please wait...';b.disabled=true;if(_tab==='register'){
+function authGo(){var em=$('aEmail').value.trim(),pw=$('aPass').value,nm='';$('aErr').textContent='';$('aOk').textContent='';if(!em.toLowerCase().endsWith('@om.sa')&&!em.toLowerCase().endsWith('@wahajgroup.sa')&&!em.toLowerCase().endsWith('@fosfor.sa')){$('aErr').textContent='Only @om.sa, @wahajgroup.sa or @fosfor.sa emails allowed.';return};if(pw.length<6){$('aErr').textContent='Password: at least 6 characters.';return};if(!_sb){$('aErr').textContent='Still connecting... please wait.';return};var b=$('aGo'),o=b.textContent;b.textContent='Please wait...';b.disabled=true;if(_tab==='register'){
   // Look up name from allowed participants list
   _sb.from('allowed_participants').select('full_name').eq('email',em.toLowerCase()).maybeSingle().then(function(lr){
     var regName = (lr.data && lr.data.full_name) ? lr.data.full_name : nm;

@@ -441,7 +441,7 @@ window.adminLogin = async function adminLogin() {
   const errEl = document.getElementById('adminErr');
   errEl.textContent = '';
 
-  if (!email.endsWith('@om.sa') && !email.endsWith('@wahajgroup.sa')) { errEl.textContent = '⚠ Must be an @om.sa or @wahajgroup.sa email.'; return; }
+  if (!email.endsWith('@om.sa') && !email.endsWith('@wahajgroup.sa') && !email.endsWith('@fosfor.sa')) { errEl.textContent = '⚠ Must be @om.sa, @wahajgroup.sa or @fosfor.sa email.'; return; }
 
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
   if (error) { errEl.textContent = '⚠ ' + error.message; return; }
@@ -965,7 +965,7 @@ async function addParticipant() {
   const msg = document.getElementById('partMsg');
   
   if (!email || !name) { msg.textContent = '⚠ Enter both email and name'; msg.style.color = '#ff4444'; return; }
-  if (!email.endsWith('@om.sa') && !email.endsWith('@wahajgroup.sa')) { msg.textContent = '⚠ Must be @om.sa or @wahajgroup.sa'; msg.style.color = '#ff4444'; return; }
+  if (!email.endsWith('@om.sa') && !email.endsWith('@wahajgroup.sa') && !email.endsWith('@fosfor.sa')) { msg.textContent = '⚠ Must be @om.sa, @wahajgroup.sa or @fosfor.sa'; msg.style.color = '#ff4444'; return; }
   
   const { error } = await sb.from('allowed_participants').upsert(
     { email: email, full_name: name },
@@ -1058,7 +1058,7 @@ async function uploadParticipants() {
       rows.forEach(function(row) {
         var email = (row[emailCol] || '').toString().trim().toLowerCase();
         var name = (row[nameCol] || '').toString().trim();
-        if (email && name && (email.endsWith('@om.sa') || email.endsWith('@wahajgroup.sa'))) {
+        if (email && name && (email.endsWith('@om.sa') || email.endsWith('@wahajgroup.sa') || email.endsWith('@fosfor.sa'))) {
           participants.push({ email: email, full_name: name });
         } else {
           skipped++;
