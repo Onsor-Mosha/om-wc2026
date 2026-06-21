@@ -131,7 +131,7 @@ window.addEventListener('DOMContentLoaded', function() {
   <div class="auth-box">
     <h2>⚙ ADMIN PANEL</h2>
     <p>OM WC2026 Prediction Competition</p>
-    <input class="auth-input" id="adminEmail" type="email" placeholder="admin@company.sa">
+    <input class="auth-input" id="adminEmail" type="email" placeholder="email@om.sa / @wahaj.sa / @fosfor.sa">
     <input class="auth-input" id="adminPass"  type="password" placeholder="Password"
            onkeydown="if(event.key==='Enter')adminLogin()">
     <div class="auth-err" id="adminErr"></div>
@@ -253,7 +253,7 @@ window.addEventListener('DOMContentLoaded', function() {
     <div style="margin-top:12px;padding:14px;background:#0d1a0d;border:1px solid #2a3a2a;border-radius:8px;">
       <p style="color:#00FF00;font-size:12px;font-weight:600;margin-bottom:8px;">Add Single Participant</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <input type="email" id="partEmail" placeholder="email@om.sa" style="flex:2;min-width:150px;padding:10px;border-radius:6px;border:1px solid #333;background:#1a1a1a;color:#fff;font-size:13px;">
+        <input type="email" id="partEmail" placeholder="email@om.sa / @wahaj.sa / @fosfor.sa" style="flex:2;min-width:150px;padding:10px;border-radius:6px;border:1px solid #333;background:#1a1a1a;color:#fff;font-size:13px;">
         <input type="text" id="partName" placeholder="Full Name" style="flex:2;min-width:120px;padding:10px;border-radius:6px;border:1px solid #333;background:#1a1a1a;color:#fff;font-size:13px;">
         <input type="text" id="partEmpId" placeholder="Employee ID" style="flex:1;min-width:80px;padding:10px;border-radius:6px;border:1px solid #333;background:#1a1a1a;color:#fff;font-size:13px;">
         <button onclick="addParticipant()" style="padding:10px 16px;background:#00FF00;color:#000;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;">+ Add</button>
@@ -270,7 +270,7 @@ window.addEventListener('DOMContentLoaded', function() {
     <h3>Reset User Predictions</h3>
     <p style="color:#8a9a8a;font-size:13px;">Clear a user's submitted predictions so they can re-submit.</p>
     <div style="display:flex;gap:10px;align-items:center;margin-top:10px;">
-      <input type="email" id="resetUserEmail" placeholder="user@om.sa / @wahajgroup.sa" style="flex:1;padding:10px;border-radius:6px;border:1px solid #333;background:#1a1a1a;color:#fff;font-size:14px;">
+      <input type="email" id="resetUserEmail" placeholder="email@om.sa / @wahaj.sa / @fosfor.sa" style="flex:1;padding:10px;border-radius:6px;border:1px solid #333;background:#1a1a1a;color:#fff;font-size:14px;">
       <button onclick="resetUserPredictions()" style="padding:10px 20px;background:#ff4444;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Reset</button>
     </div>
     <span id="resetMsg" style="display:block;margin-top:8px;font-size:13px;"></span>
@@ -448,8 +448,9 @@ window.adminLogin = async function adminLogin() {
   if (error) { errEl.textContent = '⚠ ' + error.message; return; }
   adminUser = data.user;
   // Check admin email
-  if(email.toLowerCase() !== 'hussein@om.sa'){
-    document.getElementById('adminErr').textContent = '⚠ Access denied. Only the admin account can access this panel.';
+  var admins=['hussein@om.sa','shaima@wahajgroup.sa','sarah@wahajgroup.sa','fay@wahajgroup.sa'];
+  if(admins.indexOf(email.toLowerCase())===-1){
+    document.getElementById('adminErr').textContent = '⚠ Access denied. Only admin accounts can access this panel.';
     await sb.auth.signOut();
     return;
   }
