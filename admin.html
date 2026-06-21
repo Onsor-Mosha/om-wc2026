@@ -505,14 +505,14 @@ async function loadSettings() {
 
   // Set deadline inputs
   if (map['phase1_deadline']) {
-    const d = new Date(map['phase1_deadline']);
-    document.getElementById('dl1date').value = d.toISOString().slice(0,10);
-    document.getElementById('dl1time').value = d.toISOString().slice(11,16);
+    var v = map['phase1_deadline'];
+    document.getElementById('dl1date').value = v.slice(0,10);
+    document.getElementById('dl1time').value = v.slice(11,16);
   }
   if (map['phase2_deadline']) {
-    const d = new Date(map['phase2_deadline']);
-    document.getElementById('dl2date').value = d.toISOString().slice(0,10);
-    document.getElementById('dl2time').value = d.toISOString().slice(11,16);
+    var v = map['phase2_deadline'];
+    document.getElementById('dl2date').value = v.slice(0,10);
+    document.getElementById('dl2time').value = v.slice(11,16);
   }
 }
 
@@ -561,8 +561,8 @@ async function saveDeadlines() {
   const msg = document.getElementById('dlMsg');
 
   const upserts = [];
-  if (dl1) upserts.push({key:'phase1_deadline', value: new Date(dl1).toISOString(), updated_at: new Date().toISOString()});
-  if (dl2) upserts.push({key:'phase2_deadline', value: new Date(dl2).toISOString(), updated_at: new Date().toISOString()});
+  if (dl1) upserts.push({key:'phase1_deadline', value: dl1, updated_at: new Date().toISOString()});
+  if (dl2) upserts.push({key:'phase2_deadline', value: dl2, updated_at: new Date().toISOString()});
 
   if (upserts.length === 0) { msg.textContent='No deadlines entered.'; msg.className='msg err'; msg.style.display='block'; return; }
 
