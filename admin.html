@@ -1012,9 +1012,17 @@ async function addParticipant() {
 }
 
 async function removeParticipant(email) {
-  if (!confirm('Remove ' + email + ' from the allowed list?\n\nNote: If they already registered, their account will remain but they won\'t appear in the participants list.')) return;
+  if (!confirm('Remove ' + email + '?\n\nThis will also remove their predictions and leaderboard entry. This cannot be undone.')) return;
+  // Clean up predictions and profile
+  const { data: profile } = await sb.from('profiles').select('id').eq('email', email).maybeSingle();
+  if (profile) {
+    await sb.from('phase1_predictions').delete().eq('user_id', profile.id);
+    await sb.from('phase2_predictions').delete().eq('user_id', profile.id);
+    await sb.from('profiles').delete().eq('id', profile.id);
+  }
   await sb.from('allowed_participants').delete().eq('email', email);
   loadParticipants();
+  loadLeaderboard();
 }
 
 async function editParticipant(email, currentName, currentEmpId) {
