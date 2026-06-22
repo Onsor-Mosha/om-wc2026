@@ -271,7 +271,8 @@ window.addEventListener('DOMContentLoaded', function() {
     <p style="color:#8a9a8a;font-size:13px;">Clear a user's submitted predictions so they can re-submit.</p>
     <div style="display:flex;gap:10px;align-items:center;margin-top:10px;">
       <input type="email" id="resetUserEmail" placeholder="email@om.sa / @wahaj.sa / @fosfor.sa" style="flex:1;padding:10px;border-radius:6px;border:1px solid #333;background:#1a1a1a;color:#fff;font-size:14px;">
-      <button onclick="resetUserPredictions()" style="padding:10px 20px;background:#ff4444;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Reset</button>
+      <button onclick="resetUserPredictions('groups')" style="padding:10px 20px;background:#ff4444;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Reset Groups</button>
+      <button onclick="resetUserPredictions('knockouts')" style="padding:10px 20px;background:#ff4444;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Reset Knockouts</button>
     </div>
     <span id="resetMsg" style="display:block;margin-top:8px;font-size:13px;"></span>
   </div>
@@ -859,22 +860,26 @@ async function loadLeaderboard() {
   document.getElementById('lbContent').innerHTML = html;
 }
 
-async function resetUserPredictions() {
+async function resetUserPredictions(phase) {
   const email = document.getElementById('resetUserEmail').value.trim();
   const msgEl = document.getElementById('resetMsg');
+  const label = phase === 'groups' ? 'Groups Phase' : 'Knockouts Phase';
   if (!email) { msgEl.textContent = '⚠ Enter an email'; msgEl.style.color = '#ff4444'; return; }
   
-  if (!confirm('Are you sure you want to reset predictions for ' + email + '? This cannot be undone.')) return;
+  if (!confirm('Are you sure you want to reset ' + label + ' predictions for ' + email + '? This cannot be undone.')) return;
   
   // Find user by email
   const { data: profile } = await sb.from('profiles').select('id').eq('email', email).single();
   if (!profile) { msgEl.textContent = '⚠ User not found'; msgEl.style.color = '#ff4444'; return; }
   
-  // Delete their predictions
-  await sb.from('phase1_predictions').delete().eq('user_id', profile.id);
-  await sb.from('phase2_predictions').delete().eq('user_id', profile.id);
+  // Delete predictions for selected phase
+  if (phase === 'groups') {
+    await sb.from('phase1_predictions').delete().eq('user_id', profile.id);
+  } else {
+    await sb.from('phase2_predictions').delete().eq('user_id', profile.id);
+  }
   
-  msgEl.textContent = '✓ Predictions cleared for ' + email;
+  msgEl.textContent = '✓ ' + label + ' predictions cleared for ' + email;
   msgEl.style.color = '#00FF00';
   setTimeout(() => msgEl.textContent = '', 4000);
   await loadLeaderboard();
