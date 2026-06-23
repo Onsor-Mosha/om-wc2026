@@ -449,7 +449,7 @@ window.adminLogin = async function adminLogin() {
   if (error) { errEl.textContent = '⚠ ' + error.message; return; }
   adminUser = data.user;
   // Check admin email
-  var admins=['hussein@om.sa','admin@om.sa','shaima@wahajgroup.sa','sarah@wahajgroup.sa','fay@wahajgroup.sa'];
+  var admins=['admin@om.sa','shaima@wahajgroup.sa','sarah@wahajgroup.sa','fay@wahajgroup.sa'];
   if(admins.indexOf(email.toLowerCase())===-1){
     document.getElementById('adminErr').textContent = '⚠ Access denied. Only admin accounts can access this panel.';
     await sb.auth.signOut();
