@@ -433,18 +433,9 @@ function teamObj(name){
 
 var T3_SLOTS_EMP = ['ABCDF','CDFGH','BEFIJ','AEHIJ','CEFHI','EHIJK','EFGIJ','DEIJL'];
 function assignThirdEmp(advancing){
-  var slots = T3_SLOTS_EMP.map(function(s){ return {combo:s, eligible:s.split('').filter(function(g){return advancing.indexOf(g)>=0;})}; });
-  slots.sort(function(a,b){ return a.eligible.length-b.eligible.length; });
-  var assign={}, used={};
-  function bt(i){
-    if(i===slots.length) return true;
-    for(var k=0;k<slots[i].eligible.length;k++){
-      var g=slots[i].eligible[k];
-      if(!used[g]){ used[g]=true; assign[slots[i].combo]=g; if(bt(i+1)) return true; used[g]=false; delete assign[slots[i].combo]; }
-    }
-    return false;
-  }
-  return bt(0)?assign:null;
+  var assign={};
+  T3_SLOTS_EMP.forEach(function(combo,i){ assign[combo]=advancing[i]; });
+  return assign;
 }
 
 // Load official group results + 3rd place selection (for Phase 2 bracket)

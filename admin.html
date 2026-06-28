@@ -684,31 +684,39 @@ async function buildKOResults() {
   // 3. Third-place selection UI
   const tpDiv = document.createElement('div');
   tpDiv.style.cssText = 'margin-bottom:24px;padding:16px;background:#0d1a0d;border:1px solid #00FF00;border-radius:8px;';
-  tpDiv.innerHTML = '<p style="color:#00FF00;font-size:13px;margin-bottom:6px;font-weight:600">Step 1: Select the 8 best 3rd-place teams that advance</p>' +
-    '<p style="color:#8a9a8a;font-size:11px;margin-bottom:10px">FIFA: only 8 of 12 third-place teams advance to R32. Tick the 8 groups whose 3rd-place team qualifies.</p>' +
-    '<div id="thirdPlaceChecks" style="display:flex;flex-wrap:wrap;gap:8px"></div>' +
+  tpDiv.innerHTML = '<p style="color:#00FF00;font-size:13px;margin-bottom:6px;font-weight:600">Step 1: Rank the 8 best 3rd-place teams (1st to 8th)</p>' +
+    '<p style="color:#8a9a8a;font-size:11px;margin-bottom:10px">FIFA: only 8 of 12 third-place teams advance to R32. Assign each rank to determine bracket placement.</p>' +
+    '<div id="thirdPlaceRanking" style="display:flex;flex-direction:column;gap:6px"></div>' +
     '<button onclick="saveThirdPlaces()" style="margin-top:12px;padding:8px 20px;background:#00FF00;color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:600">Save & Resolve R32</button>' +
     '<span id="tpMsg" style="margin-left:12px;font-size:12px"></span>';
   container.appendChild(tpDiv);
 
-  const checksDiv = tpDiv.querySelector('#thirdPlaceChecks');
-  GROUPS_DATA.forEach(g => {
-    const third = gr[g.id].pos3;
-    const lbl = document.createElement('label');
-    lbl.style.cssText = 'display:flex;align-items:center;gap:5px;background:#1a1a1a;padding:6px 10px;border-radius:5px;font-size:12px;cursor:pointer;color:#fff';
-    const checked = advancing.includes(g.id) ? 'checked' : '';
-    lbl.innerHTML = '<input type="checkbox" class="tp-check" value="'+g.id+'" '+checked+'> '+g.id+': '+third;
-    checksDiv.appendChild(lbl);
-  });
+  const rankDiv = tpDiv.querySelector('#thirdPlaceRanking');
+  const opponents = ['vs E1','vs I1','vs D1','vs G1','vs A1','vs L1','vs B1','vs K1'];
+  for(let i = 0; i < 8; i++){
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;background:#1a1a1a;padding:6px 10px;border-radius:5px;font-size:12px;color:#fff';
+    const label = document.createElement('span');
+    label.style.cssText = 'min-width:110px;color:#00FF00;font-weight:600';
+    label.textContent = (i+1) + getOrdinal(i+1) + ' (' + opponents[i] + ')';
+    const sel = document.createElement('select');
+    sel.className = 'tp-rank';
+    sel.style.cssText = 'background:#111;color:#fff;border:1px solid #2a3a2a;border-radius:4px;padding:4px 8px;font-size:12px;flex:1';
+    sel.innerHTML = '<option value="">— Select group —</option>';
+    GROUPS_DATA.forEach(g => {
+      const tName = gr[g.id].pos3 || '?';
+      sel.innerHTML += '<option value="'+g.id+'"'+(advancing[i]===g.id?' selected':'')+'>'+g.id+': '+tName+'</option>';
+    });
+    row.appendChild(label);
+    row.appendChild(sel);
+    rankDiv.appendChild(row);
+  }
+  function getOrdinal(n){ return n===1?'st':n===2?'nd':n===3?'rd':'th'; }
 
-  // 4. If we have a valid 8-group selection, resolve and show R32 + later rounds
-  if(advancing.length === 8){
-    const thirdAssign = assignThirdPlaces(advancing);
-    if(!thirdAssign){
-      const err = document.createElement('div');
-      err.style.cssText = 'padding:14px;margin-top:12px;background:#2a1a1a;border:1px solid #ff4444;border-radius:8px;color:#ff8888';
-      err.textContent = '⚠ This combination of 8 third-place groups cannot fill all bracket slots. Please adjust your selection.';
-      container.appendChild(err);
+  // 4. If we have a valid 8-group ranking, resolve and show R32 + later rounds
+  if(advancing.length === 8 && advancing.every(g => g)){
+    const thirdAssign = {};
+    T3_SLOTS.forEach((combo, i) => { thirdAssign[combo] = advancing[i]; });
       return;
     }
     window._r32Resolved = {};
@@ -734,14 +742,24 @@ async function buildKOResults() {
 }
 
 async function saveThirdPlaces(){
-  const checked = [...document.querySelectorAll('.tp-check:checked')].map(c => c.value);
+  const selects = [...document.querySelectorAll('.tp-rank')];
+  const ranking = selects.map(s => s.value);
   const msg = document.getElementById('tpMsg');
-  if(checked.length !== 8){
-    msg.textContent = '⚠ Select exactly 8 (you have '+checked.length+')';
+  
+  // Validate: all 8 must be selected
+  if(ranking.some(v => !v)){
+    msg.textContent = '⚠ All 8 ranks must be assigned';
     msg.style.color = '#ff4444';
     return;
   }
-  await sb.from('settings').upsert({key:'third_place_groups', value: JSON.stringify(checked)}, {onConflict:'key'});
+  // Validate: no duplicates
+  if(new Set(ranking).size !== 8){
+    msg.textContent = '⚠ Each group can only be used once';
+    msg.style.color = '#ff4444';
+    return;
+  }
+  
+  await sb.from('settings').upsert({key:'third_place_groups', value: JSON.stringify(ranking)}, {onConflict:'key'});
   msg.textContent = '✓ Saved';
   msg.style.color = '#00FF00';
   buildKOResults();
