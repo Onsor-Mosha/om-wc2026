@@ -913,8 +913,7 @@ function loadKnockoutPreds(){
 }
 
 function lockKnockoutIfSubmitted(count){
-  // 15 knockout matches total (8 R16 picks... actually user picks 16 R32... ) - lock when fully submitted
-  // We lock after explicit submit; handled by save flow
+  if(count>0){ lockKnockout(); }
 }
 
 function lockAfterSubmit(){
