@@ -717,8 +717,6 @@ async function buildKOResults() {
   if(advancing.length === 8 && advancing.every(g => g)){
     const thirdAssign = {};
     T3_SLOTS.forEach((combo, i) => { thirdAssign[combo] = advancing[i]; });
-      return;
-    }
     window._r32Resolved = {};
     R32_MATCHUPS.forEach(m => {
       window._r32Resolved[m.id] = {
